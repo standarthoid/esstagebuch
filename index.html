@@ -21,6 +21,9 @@
     --amber: #c76a35;
     --line: #dadfd2;
     --danger: #b3503a;
+    --tl-good: #4c8c5f;
+    --tl-warn: #b4902a;
+    --tl-bad: #b3503a;
     --shadow: rgba(28, 35, 24, 0.08);
   }
 
@@ -36,6 +39,9 @@
       --amber: #e2935e;
       --line: #313d33;
       --danger: #e2846c;
+      --tl-good: #6fa884;
+      --tl-warn: #d9b35c;
+      --tl-bad: #e2846c;
       --shadow: rgba(0, 0, 0, 0.35);
     }
   }
@@ -70,7 +76,7 @@
   }
 
   header {
-    padding: 28px 20px 16px;
+    padding: 28px 20px 14px;
     flex: none;
   }
 
@@ -110,6 +116,40 @@
     color: var(--ink-soft);
   }
 
+  .view-switch {
+    display: flex;
+    gap: 6px;
+    padding: 2px 20px 8px;
+  }
+
+  .view-btn {
+    flex: 1;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: "Work Sans", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 0;
+    border-radius: 14px;
+    cursor: pointer;
+  }
+
+  .view-btn.active {
+    background: var(--herb);
+    color: var(--paper-card);
+    border-color: var(--herb);
+  }
+
+  .view-btn:focus-visible { outline: 2px solid var(--herb-ink); outline-offset: 2px; }
+
+  .disclaimer {
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    padding: 0 20px 10px;
+    line-height: 1.5;
+  }
+
   main {
     flex: 1 1 auto;
     overflow-y: auto;
@@ -138,6 +178,7 @@
   .entry {
     background: var(--paper-card);
     border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
     border-radius: 14px;
     padding: 12px 14px;
     display: grid;
@@ -146,6 +187,10 @@
     gap: 10px;
     box-shadow: 0 1px 2px var(--shadow);
   }
+
+  .entry.tl-good { border-left-color: var(--tl-good); }
+  .entry.tl-warn { border-left-color: var(--tl-warn); }
+  .entry.tl-bad { border-left-color: var(--tl-bad); }
 
   .entry time {
     font-size: 12px;
@@ -158,6 +203,22 @@
     font-size: 15px;
     line-height: 1.45;
     overflow-wrap: anywhere;
+  }
+
+  .meal-type {
+    display: block;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--herb-ink);
+    margin-bottom: 2px;
+  }
+
+  .macros {
+    margin: 4px 0 0;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    font-family: "IBM Plex Mono", monospace;
   }
 
   .entry button {
@@ -193,6 +254,104 @@
     font-size: 12px;
     color: var(--ink-faint);
     padding: 0 24px 8px;
+  }
+
+  .week-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 2px 14px;
+  }
+
+  .week-head h2 {
+    font-size: 17px;
+    margin: 0;
+  }
+
+  .export-btn {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: "Work Sans", sans-serif;
+  }
+
+  .export-btn:focus-visible { outline: 2px solid var(--herb-ink); outline-offset: 2px; }
+
+  .week-day { margin-bottom: 16px; }
+
+  .week-day-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+
+  .week-day-head .wd-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  .week-day-head .wd-date {
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-left: 6px;
+  }
+
+  .week-day-head .wd-kcal {
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+
+  .week-bar-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    margin-bottom: 8px;
+    overflow: hidden;
+  }
+
+  .week-bar-fill {
+    height: 100%;
+    background: var(--herb);
+    border-radius: 2px;
+  }
+
+  .week-empty {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    padding: 2px 0 4px;
+  }
+
+  .week-entry {
+    display: flex;
+    gap: 8px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+
+  .week-entry:last-child { border-bottom: none; }
+
+  .week-entry time {
+    color: var(--ink-faint);
+    flex: none;
+    width: 42px;
+    font-size: 11.5px;
+    padding-top: 1px;
+  }
+
+  .week-entry .wt-text { flex: 1; line-height: 1.4; }
+
+  .week-entry .wt-kcal {
+    flex: none;
+    color: var(--ink-faint);
+    font-size: 11.5px;
+    padding-top: 1px;
   }
 
   footer {
@@ -305,9 +464,7 @@
 
   .connect-gate.hidden { display: none; }
 
-  .connect-gate .mark {
-    font-size: 40px;
-  }
+  .connect-gate .mark { font-size: 40px; }
 
   .connect-gate p {
     color: var(--ink-soft);
@@ -341,12 +498,18 @@
     <p class="today mono" id="todayLabel"></p>
   </header>
 
+  <div class="view-switch">
+    <button type="button" class="view-btn active" data-view="feed">Verlauf</button>
+    <button type="button" class="view-btn" data-view="week">Woche</button>
+  </div>
+  <p class="disclaimer">Kalorien, Makros &amp; Ampel sind grobe Schätzungen anhand typischer Portionsgrößen — keine Ernährungsberatung.</p>
+
   <main id="list"></main>
 
   <footer>
     <p class="hint" id="supportHint" hidden>Spracheingabe wird von diesem Browser nicht unterstützt — tippe oder nutze das Diktier-Mikrofon deiner Tastatur.</p>
     <form class="composer" id="composer">
-      <input id="textInput" type="text" placeholder="z. B. Linsensuppe mit Joghurt" autocomplete="off" />
+      <input id="textInput" type="text" placeholder="z. B. Frühstück: Haferflocken mit Beeren" autocomplete="off" />
       <button type="submit" class="action-btn" id="actionBtn" aria-label="Mahlzeit per Sprache hinzufügen">
         <svg id="iconMic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>
         <svg id="iconSend" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -395,7 +558,7 @@
     toastEl.textContent = msg;
     toastEl.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
   }
 
   function setSync(state) {
@@ -403,6 +566,8 @@
     if (state === 'on') syncDot.classList.add('on');
     if (state === 'busy') syncDot.classList.add('busy');
   }
+
+  function round1(n) { return Math.round(n * 10) / 10; }
 
   function dayKey(iso) { return new Date(iso).toDateString(); }
 
@@ -424,17 +589,170 @@
     return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
-  function sortDesc(meals) {
-    return meals.slice().sort((a, b) => new Date(b.time) - new Date(a.time));
+  function sortDesc(arr) {
+    return arr.slice().sort((a, b) => new Date(b.time) - new Date(a.time));
   }
 
-  function render(meals) {
-    if (!meals.length) {
+  // ---------------------------------------------------------------------
+  // Local nutrition estimator — a small built-in lookup of common foods
+  // (kcal, carbs, fat, protein, fiber per typical portion). No external
+  // API or secret involved; always a rough estimate, never exact.
+  // ---------------------------------------------------------------------
+  const FOOD_DB = {
+    'spiegelei': [90, 1, 7, 6, 0], 'rührei': [180, 2, 14, 13, 0],
+    'eier': [156, 2, 10, 12, 0], 'ei': [78, 1, 5, 6, 0],
+    'vollkorntoast': [80, 13, 1, 4, 2], 'toast': [75, 14, 1, 2, 1],
+    'vollkornbrot': [90, 15, 1, 4, 2.5], 'brot': [85, 15, 1, 3, 1.5],
+    'butter': [35, 0, 4, 0, 0], 'avocado': [120, 6, 11, 1.5, 5],
+    'haferflocken': [190, 33, 3.5, 6.5, 5], 'porridge': [220, 35, 5, 7, 5],
+    'müsli': [200, 30, 6, 5, 4], 'milch': [100, 10, 4, 7, 0],
+    'griechischer joghurt': [130, 5, 6, 13, 0], 'joghurt': [95, 7, 4, 6, 0],
+    'quark': [100, 4, 0.5, 18, 0], 'banane': [105, 27, 0.3, 1.3, 3],
+    'apfel': [95, 25, 0.3, 0.5, 4], 'beeren': [50, 11, 0.3, 1, 3],
+    'walnüsse': [195, 4, 19, 4.5, 2], 'mandeln': [175, 6, 15, 6, 3.5],
+    'nüsse': [180, 5, 16, 5, 2.5], 'honig': [64, 17, 0, 0, 0],
+    'marmelade': [50, 13, 0, 0, 0.2], 'käse': [110, 0.5, 9, 7, 0],
+    'schinken': [60, 0.5, 2.5, 10, 0], 'lachs': [230, 0, 14, 25, 0],
+    'hähnchen': [240, 0, 5, 46, 0], 'huhn': [240, 0, 5, 46, 0],
+    'rindfleisch': [300, 0, 18, 33, 0], 'linsensuppe': [230, 30, 4, 15, 9],
+    'linsen': [170, 28, 0.6, 13, 11], 'reis': [195, 43, 0.5, 4, 1],
+    'nudeln': [280, 55, 1.5, 10, 3], 'pasta': [280, 55, 1.5, 10, 3],
+    'süßkartoffel': [180, 41, 0.3, 3, 6], 'kartoffeln': [170, 38, 0.2, 4, 4],
+    'brokkoli': [50, 7, 0.5, 4, 4], 'spinat': [25, 2, 0.4, 3, 2],
+    'tomate': [20, 4, 0.2, 1, 1], 'gurke': [15, 3, 0.1, 0.6, 0.5],
+    'paprika': [30, 6, 0.3, 1, 2], 'zwiebel': [15, 3, 0, 0.4, 0.6],
+    'salat': [40, 4, 2, 1, 2], 'olivenöl': [120, 0, 14, 0, 0],
+    'pizza': [500, 55, 22, 20, 3], 'burger': [550, 40, 30, 28, 2.5],
+    'pommes': [365, 48, 17, 4, 4], 'schokolade': [270, 28, 16, 3, 3],
+    'kuchen': [350, 45, 16, 5, 1.5], 'kekse': [200, 26, 9, 2, 1],
+    'chips': [270, 27, 17, 3, 2], 'limonade': [140, 35, 0, 0, 0],
+    'cola': [140, 35, 0, 0, 0], 'bier': [215, 13, 0, 2, 0],
+    'wein': [160, 4, 0, 0.2, 0], 'kaffee': [5, 1, 0, 0.3, 0],
+    'tee': [2, 0.5, 0, 0, 0], 'smoothie': [180, 38, 1, 3, 4],
+    'protein shake': [150, 5, 2, 25, 1], 'tofu': [190, 3, 11, 20, 1],
+    'kichererbsen': [205, 34, 3, 11, 10], 'bohnen': [160, 27, 0.6, 10, 10],
+    'hummus': [170, 14, 10, 7, 6], 'wrap': [350, 40, 14, 15, 4],
+    'sushi': [300, 55, 5, 10, 2], 'döner': [600, 55, 30, 30, 5],
+    'currywurst': [650, 55, 38, 18, 4], 'schnitzel': [400, 20, 22, 30, 1],
+    'pfannkuchen': [300, 40, 11, 9, 1.5], 'waffeln': [330, 42, 15, 7, 1.5],
+    'croissant': [230, 26, 12, 5, 1.5], 'brezel': [260, 50, 2, 9, 2],
+    'müsliriegel': [120, 18, 4, 2, 1.5], 'studentenfutter': [150, 10, 10, 4, 2.5],
+    'popcorn': [110, 20, 3, 2, 3.5], 'pita': [165, 33, 1, 5.5, 1.5],
+    'eintopf': [280, 30, 10, 15, 6], 'suppe': [180, 20, 7, 8, 3],
+  };
+  const FOOD_KEYS = Object.keys(FOOD_DB).sort((a, b) => b.length - a.length);
+
+  function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  function computeNutrition(text) {
+    let remaining = ' ' + text.toLowerCase() + ' ';
+    let matched = false;
+    const total = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
+    for (const key of FOOD_KEYS) {
+      const re = new RegExp('\\b' + escapeRegex(key) + '\\b', 'gi');
+      const hits = remaining.match(re);
+      if (hits && hits.length) {
+        const count = Math.min(3, hits.length);
+        const v = FOOD_DB[key];
+        total.kcal += v[0] * count; total.carbs += v[1] * count;
+        total.fat += v[2] * count; total.protein += v[3] * count;
+        total.fiber += v[4] * count;
+        matched = true;
+        remaining = remaining.replace(re, ' ');
+      }
+    }
+    if (!matched) return null;
+    return {
+      kcal: Math.round(total.kcal), carbs: round1(total.carbs),
+      fat: round1(total.fat), protein: round1(total.protein), fiber: round1(total.fiber),
+    };
+  }
+
+  function classifyTrafficLight(n) {
+    let score = 0;
+    if (n.protein >= 15) score++;
+    if (n.fiber >= 5) score++;
+    if (n.kcal > 0) {
+      if ((n.fat * 9) / n.kcal > 0.40) score--;
+      if ((n.carbs * 4) / n.kcal > 0.65) score--;
+    }
+    if (score >= 1) return 'good';
+    if (score <= -1) return 'bad';
+    return 'warn';
+  }
+
+  // ---------------------------------------------------------------------
+  // Parse a spoken/typed entry for an explicit clock time, "gestern", or
+  // a meal-type word ("Frühstück" etc.) so the entry sorts into the right
+  // spot instead of always landing at "now".
+  // ---------------------------------------------------------------------
+  const MEAL_TYPES = [
+    { re: /\bfrühstücks?\b|\bmorgens\b/i, label: 'Frühstück', h: 8, m: 0 },
+    { re: /\bmittagessens?\b|\bmittags?\b/i, label: 'Mittagessen', h: 12, m: 30 },
+    { re: /\babendessens?\b|\babends\b/i, label: 'Abendessen', h: 19, m: 0 },
+    { re: /\bsnacks?\b|\bzwischenmahlzeit\b/i, label: 'Snack', h: null, m: null },
+  ];
+
+  function parseEntryMeta(rawText) {
+    let text = rawText.trim();
+    const date = new Date();
+    let mealType = null;
+
+    const yesterdayRe = /\bgestern\b/i;
+    if (yesterdayRe.test(text)) {
+      date.setDate(date.getDate() - 1);
+      text = text.replace(yesterdayRe, ' ');
+    }
+
+    const timeRe = /\b(?:um\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*uhr\b|\b([01]?\d|2[0-3]):([0-5]\d)\b/i;
+    const tm = text.match(timeRe);
+    let hadExplicitTime = false;
+    if (tm) {
+      const h = parseInt(tm[1] ?? tm[3], 10);
+      const m = parseInt(tm[2] ?? tm[4] ?? '0', 10);
+      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+        date.setHours(h, m, 0, 0);
+        hadExplicitTime = true;
+      }
+      text = text.replace(tm[0], ' ');
+    }
+
+    for (const t of MEAL_TYPES) {
+      if (t.re.test(text)) {
+        mealType = t.label;
+        if (!hadExplicitTime && t.h !== null) date.setHours(t.h, t.m, 0, 0);
+        text = text.replace(t.re, ' ');
+        break;
+      }
+    }
+
+    let cleanText = text.replace(/\s{2,}/g, ' ').replace(/^[\s,.:-]+|[\s,.:-]+$/g, '').trim();
+    if (!cleanText) cleanText = rawText.replace(/\s{2,}/g, ' ').trim();
+
+    return { cleanText, time: date, mealType };
+  }
+
+  // ---------------------------------------------------------------------
+  // Rendering — two views over the same `meals` array.
+  // ---------------------------------------------------------------------
+  let viewMode = 'feed';
+
+  function entryCardHtml(m) {
+    const tlClass = m.trafficLight ? ' tl-' + m.trafficLight : '';
+    const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType}</span>` : '';
+    const macrosHtml = m.nutrition
+      ? `<p class="macros">~${m.nutrition.kcal} kcal · ${m.nutrition.carbs}g KH · ${m.nutrition.fat}g Fett · ${m.nutrition.protein}g Eiweiß · ${m.nutrition.fiber}g Ballaststoffe</p>`
+      : '';
+    return `<div class="entry${tlClass}"><time class="mono">${timeLabel(m.time)}</time><div>${typeHtml}<p>${escapeHtml(m.text)}</p>${macrosHtml}</div><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div>`;
+  }
+
+  function renderFeed(sorted) {
+    if (!sorted.length) {
       listEl.innerHTML = '<div class="empty"><strong>Noch nichts notiert</strong>Sprich eine Mahlzeit ins Mikrofon oder tippe sie unten ein.</div>';
       return;
     }
     const groups = new Map();
-    for (const m of meals) {
+    for (const m of sorted) {
       const k = dayKey(m.time);
       if (!groups.has(k)) groups.set(k, []);
       groups.get(k).push(m);
@@ -442,9 +760,7 @@
     let html = '';
     for (const [, items] of groups) {
       html += `<div class="day-group"><p class="day-label">${dayLabel(items[0].time)}</p><div class="entries">`;
-      for (const m of items) {
-        html += `<div class="entry"><time class="mono">${timeLabel(m.time)}</time><p>${escapeHtml(m.text)}</p><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div>`;
-      }
+      for (const m of items) html += entryCardHtml(m);
       html += '</div></div>';
     }
     listEl.innerHTML = html;
@@ -453,22 +769,135 @@
     });
   }
 
+  function startOfWeek(d) {
+    const date = new Date(d);
+    const day = (date.getDay() + 6) % 7; // Monday = 0
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - day);
+    return date;
+  }
+
+  function renderWeek(all) {
+    const weekStart = startOfWeek(new Date());
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      days.push(d);
+    }
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+
+    const byDay = new Map();
+    for (const d of days) byDay.set(d.toDateString(), []);
+    for (const m of all) {
+      const t = new Date(m.time);
+      if (t >= weekStart && t < weekEnd) {
+        const k = t.toDateString();
+        if (byDay.has(k)) byDay.get(k).push(m);
+      }
+    }
+    for (const [k, items] of byDay) byDay.set(k, items.sort((a, b) => new Date(a.time) - new Date(b.time)));
+
+    const dayTotals = days.map(d => (byDay.get(d.toDateString()) || []).reduce((sum, m) => sum + (m.nutrition ? m.nutrition.kcal : 0), 0));
+    const maxKcal = Math.max(1, ...dayTotals);
+
+    const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
+    const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
+
+    let html = `<div class="week-head"><h2>Diese Woche</h2><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div>`;
+    days.forEach((d, i) => {
+      const items = byDay.get(d.toDateString()) || [];
+      const total = dayTotals[i];
+      const pct = Math.round((total / maxKcal) * 100);
+      html += `<div class="week-day"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${total > 0 ? '~' + total + ' kcal' : ''}</span></div><div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
+      if (!items.length) {
+        html += `<p class="week-empty">Keine Einträge</p>`;
+      } else {
+        for (const m of items) {
+          const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType} · </span>` : '';
+          html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? '~' + m.nutrition.kcal : ''}</span></div>`;
+        }
+      }
+      html += `</div>`;
+    });
+    listEl.innerHTML = html;
+    document.getElementById('exportBtn').addEventListener('click', () => exportWeek(days, byDay));
+  }
+
+  function renderCurrentView() {
+    if (viewMode === 'week') renderWeek(meals);
+    else renderFeed(sortDesc(meals));
+  }
+
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      viewMode = btn.getAttribute('data-view');
+      renderCurrentView();
+    });
+  });
+
+  function exportWeek(days, byDay) {
+    const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
+    const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    let out = `Esstagebuch — Woche vom ${dateFmt.format(days[0])} bis ${dateFmt.format(days[6])}\n`;
+    out += '='.repeat(56) + '\n\n';
+    const weekTotal = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
+    for (const d of days) {
+      const items = byDay.get(d.toDateString()) || [];
+      out += `${weekdayFmt.format(d)}, ${dateFmt.format(d)}\n`;
+      if (!items.length) {
+        out += '  (keine Einträge)\n\n';
+        continue;
+      }
+      const dayTotal = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
+      for (const m of items) {
+        const type = m.mealType ? `[${m.mealType}] ` : '';
+        const n = m.nutrition;
+        const nStr = n ? ` — ~${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)` : '';
+        out += `  ${timeLabel(m.time)}  ${type}${m.text}${nStr}\n`;
+        if (n) {
+          dayTotal.kcal += n.kcal; dayTotal.carbs += n.carbs;
+          dayTotal.fat += n.fat; dayTotal.protein += n.protein; dayTotal.fiber += n.fiber;
+        }
+      }
+      out += `  Tagessumme: ~${Math.round(dayTotal.kcal)} kcal (K ${round1(dayTotal.carbs)}g · F ${round1(dayTotal.fat)}g · P ${round1(dayTotal.protein)}g · B ${round1(dayTotal.fiber)}g)\n\n`;
+      weekTotal.kcal += dayTotal.kcal; weekTotal.carbs += dayTotal.carbs;
+      weekTotal.fat += dayTotal.fat; weekTotal.protein += dayTotal.protein; weekTotal.fiber += dayTotal.fiber;
+    }
+    out += '-'.repeat(56) + '\n';
+    out += `Wochensumme: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
+    out += '\nHinweis: Kalorien- und Makronährstoffangaben sind grobe Schätzungen auf Basis typischer Portionsgrößen, keine exakte Messung oder Ernährungsberatung.\n';
+
+    const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `esstagebuch_woche_${days[0].toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   // ---------------------------------------------------------------------
   // Local cache — instant first paint + a buffer in case a save fails.
   // ---------------------------------------------------------------------
-  const CACHE_KEY = 'esstagebuch_cache_v1';
+  const CACHE_KEY = 'esstagebuch_cache_v2';
   const AUTH_KEY = 'esstagebuch_dropbox_auth_v1';
 
   function loadCache() {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); }
     catch (e) { return []; }
   }
-  function saveCache(meals) {
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(meals)); } catch (e) {}
+  function saveCache(data) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
   }
 
   let meals = loadCache();
-  render(sortDesc(meals));
+  renderCurrentView();
 
   // ---------------------------------------------------------------------
   // Dropbox OAuth2 — Authorization Code + PKCE (no client secret needed).
@@ -493,11 +922,8 @@
     try { return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); }
     catch (e) { return null; }
   }
-  function saveAuth(auth) {
-    try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch (e) {}
-  }
-  function clearAuth() {
-    try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+  function saveAuth(a) {
+    try { localStorage.setItem(AUTH_KEY, JSON.stringify(a)); } catch (e) {}
   }
 
   let auth = loadAuth();
@@ -519,38 +945,23 @@
   async function exchangeCodeForToken(code) {
     const verifier = sessionStorage.getItem('dbx_verifier') || '';
     const body = new URLSearchParams({
-      code,
-      grant_type: 'authorization_code',
-      client_id: DROPBOX_APP_KEY,
-      redirect_uri: REDIRECT_URI,
-      code_verifier: verifier,
+      code, grant_type: 'authorization_code', client_id: DROPBOX_APP_KEY,
+      redirect_uri: REDIRECT_URI, code_verifier: verifier,
     });
     const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body,
     });
     if (!res.ok) throw new Error('token_exchange_failed');
     const json = await res.json();
-    auth = {
-      access_token: json.access_token,
-      refresh_token: json.refresh_token,
-      expires_at: Date.now() + (json.expires_in - 60) * 1000,
-    };
+    auth = { access_token: json.access_token, refresh_token: json.refresh_token, expires_at: Date.now() + (json.expires_in - 60) * 1000 };
     saveAuth(auth);
   }
 
   async function refreshAccessToken() {
     if (!auth || !auth.refresh_token) throw new Error('no_refresh_token');
-    const body = new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: auth.refresh_token,
-      client_id: DROPBOX_APP_KEY,
-    });
+    const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: auth.refresh_token, client_id: DROPBOX_APP_KEY });
     const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body,
     });
     if (!res.ok) throw new Error('token_refresh_failed');
     const json = await res.json();
@@ -572,12 +983,9 @@
     const token = await ensureFreshToken();
     const res = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH }),
-      },
+      headers: { Authorization: `Bearer ${token}`, 'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH }) },
     });
-    if (res.status === 409) return []; // file does not exist yet
+    if (res.status === 409) return [];
     if (!res.ok) throw new Error('download_failed');
     const text = await res.text();
     try { return JSON.parse(text); } catch (e) { return []; }
@@ -613,22 +1021,27 @@
 
   window.addEventListener('online', () => { if (auth) queueSave(meals); });
 
-  async function addMeal(text) {
-    const trimmed = text.trim();
-    if (!trimmed) return;
+  async function addMeal(rawText) {
+    const parsed = parseEntryMeta(rawText);
+    if (!parsed.cleanText) return;
+    const nutrition = computeNutrition(parsed.cleanText);
+    const trafficLight = nutrition ? classifyTrafficLight(nutrition) : null;
     meals.push({
       id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      text: trimmed,
-      time: new Date().toISOString(),
+      text: parsed.cleanText,
+      time: parsed.time.toISOString(),
+      mealType: parsed.mealType,
+      nutrition,
+      trafficLight,
     });
-    render(sortDesc(meals));
+    renderCurrentView();
     queueSave(meals);
-    toast('Hinzugefügt');
+    toast(nutrition ? `Hinzugefügt · ~${nutrition.kcal} kcal` : 'Hinzugefügt');
   }
 
   async function deleteMeal(id) {
     meals = meals.filter(m => m.id !== id);
-    render(sortDesc(meals));
+    renderCurrentView();
     queueSave(meals);
   }
 
@@ -642,9 +1055,8 @@
 
     if (code) {
       history.replaceState(null, '', REDIRECT_URI);
-      try {
-        await exchangeCodeForToken(code);
-      } catch (e) {
+      try { await exchangeCodeForToken(code); }
+      catch (e) {
         connectError.textContent = 'Verbindung mit Dropbox fehlgeschlagen. Bitte erneut versuchen.';
         connectError.style.display = 'block';
       }
@@ -663,10 +1075,9 @@
     connectGate.classList.add('hidden');
     setSync('busy');
     try {
-      const remote = await downloadMeals();
-      meals = remote;
+      meals = await downloadMeals();
       saveCache(meals);
-      render(sortDesc(meals));
+      renderCurrentView();
       setSync('on');
     } catch (e) {
       setSync('off');
