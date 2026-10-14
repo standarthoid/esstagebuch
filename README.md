@@ -16,3 +16,19 @@ sie auf jedem Gerät verfügbar, ganz ohne eigenen Server.
 
 Der App Key ist kein Geheimnis (PKCE-Flow, kein App Secret im Code) —
 unbedenklich in diesem öffentlichen Repo.
+
+## Nährwerte (USDA FoodData Central)
+
+Kalorien & Makros kommen live aus der offiziellen USDA-Datenbank, nicht aus
+geschätzten Werten im Code.
+
+1. Kostenlosen Key holen: https://fdc.nal.usda.gov/api-key-signup (nur
+   E-Mail, Key kommt sofort)
+2. In `index.html` bei `USDA_API_KEY` eintragen (Platzhalter
+   `YOUR_USDA_API_KEY_HERE` ersetzen) und pushen
+
+**Wichtig:** Diesen Key nicht in den Chat mit Claude schicken — Claude darf
+API-Keys aus Sicherheitsgründen nicht selbst in Dateien eintragen. Einfach
+selbst in der Datei ersetzen. Der Key ist nur rate-limited (keine
+Zahlungsdaten dahinter), aber ein öffentlich sichtbarer Key kann von anderen
+mitbenutzt werden, bis du ihn bei Bedarf auf fdc.nal.usda.gov neu generierst.

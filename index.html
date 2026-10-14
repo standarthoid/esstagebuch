@@ -502,7 +502,7 @@
     <button type="button" class="view-btn active" data-view="feed">Verlauf</button>
     <button type="button" class="view-btn" data-view="week">Woche</button>
   </div>
-  <p class="disclaimer">Kalorien, Makros &amp; Ampel sind grobe Schätzungen anhand typischer Portionsgrößen — keine Ernährungsberatung.</p>
+  <p class="disclaimer">Kalorien &amp; Makros aus der USDA-Nährwertdatenbank, hochgerechnet auf eine typische Portion — keine Ernährungsberatung.</p>
 
   <main id="list"></main>
 
@@ -594,57 +594,139 @@
   }
 
   // ---------------------------------------------------------------------
-  // Local nutrition estimator — a small built-in lookup of common foods
-  // (kcal, carbs, fat, protein, fiber per typical portion). No external
-  // API or secret involved; always a rough estimate, never exact.
+  // Nutrition — real values from the USDA FoodData Central database.
+  // Each German keyword maps to an English search term (the database is
+  // English-only) and a typical portion weight in grams; the per-100g
+  // values returned by USDA are scaled to that portion and cached in
+  // localStorage, so a food is only looked up once.
+  //
+  // Replace the placeholder below with your own free key from
+  // https://fdc.nal.usda.gov/api-key-signup before this works.
   // ---------------------------------------------------------------------
+  const USDA_API_KEY = 'YOUR_USDA_API_KEY_HERE';
+
   const FOOD_DB = {
-    'spiegelei': [90, 1, 7, 6, 0], 'rührei': [180, 2, 14, 13, 0],
-    'eier': [156, 2, 10, 12, 0], 'ei': [78, 1, 5, 6, 0],
-    'vollkorntoast': [80, 13, 1, 4, 2], 'toast': [75, 14, 1, 2, 1],
-    'vollkornbrot': [90, 15, 1, 4, 2.5], 'brot': [85, 15, 1, 3, 1.5],
-    'butter': [35, 0, 4, 0, 0], 'avocado': [120, 6, 11, 1.5, 5],
-    'haferflocken': [190, 33, 3.5, 6.5, 5], 'porridge': [220, 35, 5, 7, 5],
-    'müsli': [200, 30, 6, 5, 4], 'milch': [100, 10, 4, 7, 0],
-    'griechischer joghurt': [130, 5, 6, 13, 0], 'joghurt': [95, 7, 4, 6, 0],
-    'quark': [100, 4, 0.5, 18, 0], 'banane': [105, 27, 0.3, 1.3, 3],
-    'apfel': [95, 25, 0.3, 0.5, 4], 'beeren': [50, 11, 0.3, 1, 3],
-    'walnüsse': [195, 4, 19, 4.5, 2], 'mandeln': [175, 6, 15, 6, 3.5],
-    'nüsse': [180, 5, 16, 5, 2.5], 'honig': [64, 17, 0, 0, 0],
-    'marmelade': [50, 13, 0, 0, 0.2], 'käse': [110, 0.5, 9, 7, 0],
-    'schinken': [60, 0.5, 2.5, 10, 0], 'lachs': [230, 0, 14, 25, 0],
-    'hähnchen': [240, 0, 5, 46, 0], 'huhn': [240, 0, 5, 46, 0],
-    'rindfleisch': [300, 0, 18, 33, 0], 'linsensuppe': [230, 30, 4, 15, 9],
-    'linsen': [170, 28, 0.6, 13, 11], 'reis': [195, 43, 0.5, 4, 1],
-    'nudeln': [280, 55, 1.5, 10, 3], 'pasta': [280, 55, 1.5, 10, 3],
-    'süßkartoffel': [180, 41, 0.3, 3, 6], 'kartoffeln': [170, 38, 0.2, 4, 4],
-    'brokkoli': [50, 7, 0.5, 4, 4], 'spinat': [25, 2, 0.4, 3, 2],
-    'tomate': [20, 4, 0.2, 1, 1], 'gurke': [15, 3, 0.1, 0.6, 0.5],
-    'paprika': [30, 6, 0.3, 1, 2], 'zwiebel': [15, 3, 0, 0.4, 0.6],
-    'salat': [40, 4, 2, 1, 2], 'olivenöl': [120, 0, 14, 0, 0],
-    'pizza': [500, 55, 22, 20, 3], 'burger': [550, 40, 30, 28, 2.5],
-    'pommes': [365, 48, 17, 4, 4], 'schokolade': [270, 28, 16, 3, 3],
-    'kuchen': [350, 45, 16, 5, 1.5], 'kekse': [200, 26, 9, 2, 1],
-    'chips': [270, 27, 17, 3, 2], 'limonade': [140, 35, 0, 0, 0],
-    'cola': [140, 35, 0, 0, 0], 'bier': [215, 13, 0, 2, 0],
-    'wein': [160, 4, 0, 0.2, 0], 'kaffee': [5, 1, 0, 0.3, 0],
-    'tee': [2, 0.5, 0, 0, 0], 'smoothie': [180, 38, 1, 3, 4],
-    'protein shake': [150, 5, 2, 25, 1], 'tofu': [190, 3, 11, 20, 1],
-    'kichererbsen': [205, 34, 3, 11, 10], 'bohnen': [160, 27, 0.6, 10, 10],
-    'hummus': [170, 14, 10, 7, 6], 'wrap': [350, 40, 14, 15, 4],
-    'sushi': [300, 55, 5, 10, 2], 'döner': [600, 55, 30, 30, 5],
-    'currywurst': [650, 55, 38, 18, 4], 'schnitzel': [400, 20, 22, 30, 1],
-    'pfannkuchen': [300, 40, 11, 9, 1.5], 'waffeln': [330, 42, 15, 7, 1.5],
-    'croissant': [230, 26, 12, 5, 1.5], 'brezel': [260, 50, 2, 9, 2],
-    'müsliriegel': [120, 18, 4, 2, 1.5], 'studentenfutter': [150, 10, 10, 4, 2.5],
-    'popcorn': [110, 20, 3, 2, 3.5], 'pita': [165, 33, 1, 5.5, 1.5],
-    'eintopf': [280, 30, 10, 15, 6], 'suppe': [180, 20, 7, 8, 3],
+    'spiegelei': { query: 'egg, fried', grams: 50 },
+    'rührei': { query: 'egg, scrambled', grams: 110 },
+    'eier': { query: 'egg, whole, cooked, hard-boiled', grams: 100 },
+    'ei': { query: 'egg, whole, cooked, hard-boiled', grams: 50 },
+    'vollkorntoast': { query: 'bread, whole-wheat, toasted', grams: 28 },
+    'toast': { query: 'bread, white, toasted', grams: 25 },
+    'vollkornbrot': { query: 'bread, whole-wheat', grams: 35 },
+    'brot': { query: 'bread, wheat', grams: 35 },
+    'butter': { query: 'butter, salted', grams: 10 },
+    'avocado': { query: 'avocado, raw', grams: 100 },
+    'haferflocken': { query: 'oats, raw', grams: 50 },
+    'porridge': { query: 'oatmeal, cooked with water', grams: 230 },
+    'müsli': { query: 'granola', grams: 50 },
+    'milch': { query: 'milk, reduced fat, fluid, 2% milkfat', grams: 200 },
+    'griechischer joghurt': { query: 'yogurt, greek, plain, nonfat', grams: 150 },
+    'joghurt': { query: 'yogurt, plain, whole milk', grams: 150 },
+    'quark': { query: 'cheese, cottage, lowfat, 2% milkfat', grams: 150 },
+    'banane': { query: 'banana, raw', grams: 118 },
+    'apfel': { query: 'apple, raw, with skin', grams: 180 },
+    'beeren': { query: 'blueberries, raw', grams: 100 },
+    'walnüsse': { query: 'nuts, walnuts, english', grams: 30 },
+    'mandeln': { query: 'nuts, almonds', grams: 30 },
+    'nüsse': { query: 'nuts, mixed nuts, with peanuts, oil roasted', grams: 30 },
+    'honig': { query: 'honey', grams: 21 },
+    'marmelade': { query: 'preserves, jam', grams: 20 },
+    'käse': { query: 'cheese, cheddar', grams: 30 },
+    'schinken': { query: 'ham, sliced, regular (approximately 11% fat)', grams: 40 },
+    'lachs': { query: 'fish, salmon, atlantic, cooked, dry heat', grams: 120 },
+    'hähnchen': { query: 'chicken, broilers or fryers, breast, meat only, cooked, roasted', grams: 150 },
+    'huhn': { query: 'chicken, broilers or fryers, breast, meat only, cooked, roasted', grams: 150 },
+    'rindfleisch': { query: 'beef, ground, 85% lean meat / 15% fat, cooked', grams: 150 },
+    'linsensuppe': { query: 'soup, lentil with ham, canned', grams: 300 },
+    'linsen': { query: 'lentils, mature seeds, cooked, boiled, without salt', grams: 150 },
+    'reis': { query: 'rice, white, long-grain, cooked', grams: 150 },
+    'nudeln': { query: 'pasta, cooked, enriched', grams: 200 },
+    'pasta': { query: 'pasta, cooked, enriched', grams: 200 },
+    'süßkartoffel': { query: 'sweet potato, cooked, boiled, without skin', grams: 200 },
+    'kartoffeln': { query: 'potatoes, boiled, cooked without skin', grams: 200 },
+    'brokkoli': { query: 'broccoli, cooked, boiled, drained, without salt', grams: 150 },
+    'spinat': { query: 'spinach, cooked, boiled, drained, without salt', grams: 100 },
+    'tomate': { query: 'tomatoes, red, ripe, raw', grams: 120 },
+    'gurke': { query: 'cucumber, with peel, raw', grams: 100 },
+    'paprika': { query: 'peppers, sweet, red, raw', grams: 100 },
+    'zwiebel': { query: 'onions, raw', grams: 50 },
+    'salat': { query: 'lettuce, raw', grams: 80 },
+    'olivenöl': { query: 'oil, olive, salad or cooking', grams: 14 },
+    'pizza': { query: 'pizza, cheese, regular crust, frozen, cooked', grams: 200 },
+    'burger': { query: 'fast foods, cheeseburger, large, single patty, with condiments', grams: 220 },
+    'pommes': { query: 'potatoes, french fried, all types, salt added in processing, oven-heated', grams: 150 },
+    'schokolade': { query: 'candies, chocolate, dark', grams: 40 },
+    'kuchen': { query: 'cake, yellow, commercially prepared, with icing', grams: 80 },
+    'kekse': { query: 'cookies, butter, commercially prepared, enriched', grams: 40 },
+    'chips': { query: 'snacks, potato chips, plain, salted', grams: 50 },
+    'limonade': { query: 'carbonated beverage, lemon-lime, regular', grams: 330 },
+    'cola': { query: 'carbonated beverage, cola, regular', grams: 330 },
+    'bier': { query: 'alcoholic beverage, beer, regular, all', grams: 500 },
+    'wein': { query: 'alcoholic beverage, wine, table, red', grams: 150 },
+    'kaffee': { query: 'coffee, brewed, prepared with tap water', grams: 240 },
+    'tee': { query: 'tea, brewed, prepared with tap water', grams: 240 },
+    'smoothie': { query: 'beverages, fruit smoothie, bottled', grams: 300 },
+    'protein shake': { query: 'whey protein powder', grams: 30 },
+    'tofu': { query: 'tofu, raw, firm, prepared with calcium sulfate', grams: 150 },
+    'kichererbsen': { query: 'chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt', grams: 150 },
+    'bohnen': { query: 'beans, kidney, red, mature seeds, cooked, boiled, without salt', grams: 150 },
+    'hummus': { query: 'hummus, commercial', grams: 100 },
+    'wrap': { query: 'burrito, with beans and cheese', grams: 250 },
+    'sushi': { query: 'sushi, with vegetables and fish', grams: 250 },
+    'döner': { query: 'lamb and beef gyro meat, cooked', grams: 350 },
+    'currywurst': { query: 'sausage, pork, fresh, cooked', grams: 200 },
+    'schnitzel': { query: 'veal, breaded, pan-fried', grams: 150 },
+    'pfannkuchen': { query: 'pancakes, plain, prepared from recipe', grams: 150 },
+    'waffeln': { query: 'waffles, plain, frozen, ready-to-heat, toasted', grams: 70 },
+    'croissant': { query: 'croissants, butter', grams: 60 },
+    'brezel': { query: 'pretzels, soft, unsalted', grams: 120 },
+    'müsliriegel': { query: 'granola bars, hard, plain', grams: 28 },
+    'studentenfutter': { query: 'snacks, trail mix, regular', grams: 30 },
+    'popcorn': { query: 'popcorn, air-popped', grams: 20 },
+    'pita': { query: 'bread, pita, white, enriched', grams: 60 },
+    'eintopf': { query: 'stew, beef, with vegetables', grams: 300 },
+    'suppe': { query: 'soup, vegetable, canned, prepared with water', grams: 250 },
   };
   const FOOD_KEYS = Object.keys(FOOD_DB).sort((a, b) => b.length - a.length);
 
   function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
-  function computeNutrition(text) {
+  // Per-100g nutrient lookups are cached forever (food composition doesn't
+  // change), so each ingredient only ever calls the API once.
+  const USDA_CACHE_KEY = 'esstagebuch_usda_cache_v1';
+  function loadUsdaCache() {
+    try { return JSON.parse(localStorage.getItem(USDA_CACHE_KEY) || '{}'); }
+    catch (e) { return {}; }
+  }
+  function saveUsdaCache(c) {
+    try { localStorage.setItem(USDA_CACHE_KEY, JSON.stringify(c)); } catch (e) {}
+  }
+  const usdaCache = loadUsdaCache();
+
+  async function fetchNutrientsPer100g(query) {
+    if (Object.prototype.hasOwnProperty.call(usdaCache, query)) return usdaCache[query];
+    const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=1`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('usda_search_failed');
+    const json = await res.json();
+    const food = json.foods && json.foods[0];
+    if (!food) { usdaCache[query] = null; saveUsdaCache(usdaCache); return null; }
+    const n = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
+    for (const nutrient of food.foodNutrients || []) {
+      switch (String(nutrient.nutrientNumber)) {
+        case '208': n.kcal = nutrient.value || 0; break;
+        case '205': n.carbs = nutrient.value || 0; break;
+        case '204': n.fat = nutrient.value || 0; break;
+        case '203': n.protein = nutrient.value || 0; break;
+        case '291': n.fiber = nutrient.value || 0; break;
+      }
+    }
+    usdaCache[query] = n;
+    saveUsdaCache(usdaCache);
+    return n;
+  }
+
+  async function computeNutrition(text) {
     let remaining = ' ' + text.toLowerCase() + ' ';
     let matched = false;
     const total = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
@@ -653,12 +735,18 @@
       const hits = remaining.match(re);
       if (hits && hits.length) {
         const count = Math.min(3, hits.length);
-        const v = FOOD_DB[key];
-        total.kcal += v[0] * count; total.carbs += v[1] * count;
-        total.fat += v[2] * count; total.protein += v[3] * count;
-        total.fiber += v[4] * count;
-        matched = true;
         remaining = remaining.replace(re, ' ');
+        const entry = FOOD_DB[key];
+        try {
+          const per100 = await fetchNutrientsPer100g(entry.query);
+          if (per100) {
+            const factor = (entry.grams / 100) * count;
+            total.kcal += per100.kcal * factor; total.carbs += per100.carbs * factor;
+            total.fat += per100.fat * factor; total.protein += per100.protein * factor;
+            total.fiber += per100.fiber * factor;
+            matched = true;
+          }
+        } catch (e) { /* skip this ingredient, keep the rest */ }
       }
     }
     if (!matched) return null;
@@ -869,7 +957,7 @@
     }
     out += '-'.repeat(56) + '\n';
     out += `Wochensumme: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
-    out += '\nHinweis: Kalorien- und Makronährstoffangaben sind grobe Schätzungen auf Basis typischer Portionsgrößen, keine exakte Messung oder Ernährungsberatung.\n';
+    out += '\nHinweis: Kalorien- und Makronährstoffangaben stammen aus der USDA-Nährwertdatenbank, hochgerechnet auf eine typische Portionsgröße — keine exakte Messung oder Ernährungsberatung.\n';
 
     const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -1024,19 +1112,29 @@
   async function addMeal(rawText) {
     const parsed = parseEntryMeta(rawText);
     if (!parsed.cleanText) return;
-    const nutrition = computeNutrition(parsed.cleanText);
-    const trafficLight = nutrition ? classifyTrafficLight(nutrition) : null;
-    meals.push({
+    const entry = {
       id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       text: parsed.cleanText,
       time: parsed.time.toISOString(),
       mealType: parsed.mealType,
-      nutrition,
-      trafficLight,
-    });
+      nutrition: null,
+      trafficLight: null,
+    };
+    meals.push(entry);
     renderCurrentView();
     queueSave(meals);
-    toast(nutrition ? `Hinzugefügt · ~${nutrition.kcal} kcal` : 'Hinzugefügt');
+    toast('Hinzugefügt · schätze Nährwerte …');
+
+    try {
+      const nutrition = await computeNutrition(parsed.cleanText);
+      if (nutrition) {
+        entry.nutrition = nutrition;
+        entry.trafficLight = classifyTrafficLight(nutrition);
+        renderCurrentView();
+        queueSave(meals);
+        toast(`~${nutrition.kcal} kcal geschätzt`);
+      }
+    } catch (e) { /* no nutrition data for this entry — not fatal */ }
   }
 
   async function deleteMeal(id) {
