@@ -1093,50 +1093,58 @@
   boot();
 
   // ---------------------------------------------------------------------
-  // Speech recognition (unchanged): Chrome/Android in-page, otherwise
-  // the device keyboard's own dictation works in the text field.
+  // Speech recognition: stays open across pauses — it only finishes (and
+  // submits the whole accumulated transcript) when the button is tapped
+  // again, so listing several items in one breath doesn't get cut off.
+  // Where unsupported, the device keyboard's own dictation works in the
+  // text field instead.
   // ---------------------------------------------------------------------
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   let recognition = null;
   let listening = false;
+  let sessionFinal = '';
 
   function setListening(on) {
     listening = on;
     actionBtn.classList.toggle('listening', on);
+    updateActionIcon();
   }
 
   function updateActionIcon() {
     const hasText = textInput.value.trim().length > 0;
-    iconMic.hidden = hasText;
-    iconSend.hidden = !hasText;
+    const showSend = listening || hasText;
+    iconMic.hidden = showSend;
+    iconSend.hidden = !showSend;
+    actionBtn.setAttribute('aria-label', listening ? 'Aufnahme beenden und senden' : (hasText ? 'Senden' : 'Mahlzeit per Sprache hinzufügen'));
   }
 
   if (SR) {
     recognition = new SR();
     recognition.lang = 'de-DE';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
     recognition.onresult = (event) => {
-      let finalText = '';
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const r = event.results[i];
-        if (r.isFinal) finalText += r[0].transcript;
+        if (r.isFinal) sessionFinal += (sessionFinal ? ' ' : '') + r[0].transcript;
         else interim += r[0].transcript;
       }
-      textInput.value = finalText || interim;
-      if (finalText.trim()) {
-        addMeal(finalText);
-        textInput.value = '';
-        updateActionIcon();
-      }
+      textInput.value = (sessionFinal + (interim ? ' ' + interim : '')).trim();
+      updateActionIcon();
     };
 
     recognition.onend = () => {
       setListening(false);
-      if (!textInput.value.trim()) updateActionIcon();
+      sessionFinal = '';
+      const text = textInput.value.trim();
+      if (text) {
+        addMeal(text);
+        textInput.value = '';
+        updateActionIcon();
+      }
     };
 
     recognition.onerror = (event) => {
@@ -1146,7 +1154,6 @@
       } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
         toast('Spracheingabe nicht möglich.');
       }
-      updateActionIcon();
     };
   } else {
     supportHint.hidden = false;
@@ -1154,6 +1161,10 @@
 
   composer.addEventListener('submit', (e) => {
     e.preventDefault();
+    if (listening) {
+      recognition.stop();
+      return;
+    }
     const hasText = textInput.value.trim().length > 0;
     if (hasText) {
       addMeal(textInput.value);
@@ -1162,12 +1173,9 @@
       return;
     }
     if (!recognition) return;
-    if (listening) {
-      recognition.stop();
-    } else {
-      setListening(true);
-      try { recognition.start(); } catch (e) { setListening(false); }
-    }
+    sessionFinal = '';
+    setListening(true);
+    try { recognition.start(); } catch (e) { setListening(false); }
   });
 
   textInput.addEventListener('input', updateActionIcon);
