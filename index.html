@@ -1133,8 +1133,13 @@
         renderCurrentView();
         queueSave(meals);
         toast(`~${nutrition.kcal} kcal geschätzt`);
+      } else {
+        toast('Keine Nährwerte erkannt');
       }
-    } catch (e) { /* no nutrition data for this entry — not fatal */ }
+    } catch (e) {
+      console.error('Nährwert-Schätzung fehlgeschlagen:', e);
+      toast('Nährwerte konnten nicht geladen werden');
+    }
   }
 
   async function deleteMeal(id) {
