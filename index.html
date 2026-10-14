@@ -778,7 +778,7 @@
     { re: /\bfrühstücks?\b|\bmorgens\b/i, label: 'Frühstück', h: 8, m: 0 },
     { re: /\bmittagessens?\b|\bmittags?\b/i, label: 'Mittagessen', h: 12, m: 30 },
     { re: /\babendessens?\b|\babends\b/i, label: 'Abendessen', h: 19, m: 0 },
-    { re: /\bsnacks?\b|\bzwischenmahlzeit\b/i, label: 'Snack', h: null, m: null },
+    { re: /\bsnacks?\b|\bzwischenmahlzeit\b|\bzwischendurch\b|\bnaschen\b/i, label: 'Snack', h: null, m: null },
   ];
 
   function parseEntryMeta(rawText) {
