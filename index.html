@@ -502,7 +502,7 @@
     <button type="button" class="view-btn active" data-view="feed">Verlauf</button>
     <button type="button" class="view-btn" data-view="week">Woche</button>
   </div>
-  <p class="disclaimer">Kalorien &amp; Makros aus der USDA-Nährwertdatenbank, hochgerechnet auf eine typische Portion — keine Ernährungsberatung.</p>
+  <p class="disclaimer">Kalorien &amp; Makros nach Möglichkeit aus der USDA-Nährwertdatenbank (~), sonst ein grober Richtwert (≈) — keine Ernährungsberatung.</p>
 
   <main id="list"></main>
 
@@ -726,7 +726,18 @@
     return n;
   }
 
-  async function computeNutrition(text) {
+  // Generic per-meal-type average, used only when nothing else turned up
+  // anything — so a figure is always shown, clearly marked as a rough
+  // stand-in rather than data about what was actually eaten.
+  const GENERIC_MEAL_ESTIMATE = {
+    'Frühstück': { kcal: 350, carbs: 45, fat: 12, protein: 12, fiber: 4 },
+    'Mittagessen': { kcal: 650, carbs: 70, fat: 25, protein: 30, fiber: 6 },
+    'Abendessen': { kcal: 600, carbs: 55, fat: 28, protein: 28, fiber: 5 },
+    'Snack': { kcal: 200, carbs: 22, fat: 9, protein: 6, fiber: 2 },
+  };
+  const GENERIC_MEAL_FALLBACK = { kcal: 450, carbs: 50, fat: 18, protein: 18, fiber: 4 };
+
+  async function computeNutrition(text, mealType) {
     let remaining = ' ' + text.toLowerCase() + ' ';
     let matched = false;
     const total = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
@@ -749,11 +760,30 @@
         } catch (e) { /* skip this ingredient, keep the rest */ }
       }
     }
-    if (!matched) return null;
-    return {
-      kcal: Math.round(total.kcal), carbs: round1(total.carbs),
-      fat: round1(total.fat), protein: round1(total.protein), fiber: round1(total.fiber),
-    };
+    if (matched) {
+      return {
+        kcal: Math.round(total.kcal), carbs: round1(total.carbs),
+        fat: round1(total.fat), protein: round1(total.protein), fiber: round1(total.fiber),
+        estimated: false,
+      };
+    }
+
+    // Nothing in our curated list matched — try the raw description
+    // directly against USDA before giving up on real data entirely.
+    try {
+      const per100 = await fetchNutrientsPer100g(text.toLowerCase());
+      if (per100) {
+        const grams = 300; // generic "one plate" portion, since we don't know the dish
+        return {
+          kcal: Math.round(per100.kcal * grams / 100), carbs: round1(per100.carbs * grams / 100),
+          fat: round1(per100.fat * grams / 100), protein: round1(per100.protein * grams / 100),
+          fiber: round1(per100.fiber * grams / 100), estimated: true,
+        };
+      }
+    } catch (e) { /* fall through to the generic estimate below */ }
+
+    const generic = GENERIC_MEAL_ESTIMATE[mealType] || GENERIC_MEAL_FALLBACK;
+    return { ...generic, estimated: true };
   }
 
   function classifyTrafficLight(n) {
@@ -829,7 +859,7 @@
     const tlClass = m.trafficLight ? ' tl-' + m.trafficLight : '';
     const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType}</span>` : '';
     const macrosHtml = m.nutrition
-      ? `<p class="macros">~${m.nutrition.kcal} kcal · ${m.nutrition.carbs}g KH · ${m.nutrition.fat}g Fett · ${m.nutrition.protein}g Eiweiß · ${m.nutrition.fiber}g Ballaststoffe</p>`
+      ? `<p class="macros">${m.nutrition.estimated ? '≈' : '~'}${m.nutrition.kcal} kcal · ${m.nutrition.carbs}g KH · ${m.nutrition.fat}g Fett · ${m.nutrition.protein}g Eiweiß · ${m.nutrition.fiber}g Ballaststoffe${m.nutrition.estimated ? ' · Richtwert' : ''}</p>`
       : '';
     return `<div class="entry${tlClass}"><time class="mono">${timeLabel(m.time)}</time><div>${typeHtml}<p>${escapeHtml(m.text)}</p>${macrosHtml}</div><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div>`;
   }
@@ -904,7 +934,7 @@
       } else {
         for (const m of items) {
           const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType} · </span>` : '';
-          html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? '~' + m.nutrition.kcal : ''}</span></div>`;
+          html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? (m.nutrition.estimated ? '≈' : '~') + m.nutrition.kcal : ''}</span></div>`;
         }
       }
       html += `</div>`;
@@ -944,7 +974,7 @@
       for (const m of items) {
         const type = m.mealType ? `[${m.mealType}] ` : '';
         const n = m.nutrition;
-        const nStr = n ? ` — ~${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)` : '';
+        const nStr = n ? ` — ${n.estimated ? '≈' : '~'}${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)${n.estimated ? ' [Richtwert]' : ''}` : '';
         out += `  ${timeLabel(m.time)}  ${type}${m.text}${nStr}\n`;
         if (n) {
           dayTotal.kcal += n.kcal; dayTotal.carbs += n.carbs;
@@ -1126,16 +1156,14 @@
     toast('Hinzugefügt · schätze Nährwerte …');
 
     try {
-      const nutrition = await computeNutrition(parsed.cleanText);
-      if (nutrition) {
-        entry.nutrition = nutrition;
-        entry.trafficLight = classifyTrafficLight(nutrition);
-        renderCurrentView();
-        queueSave(meals);
-        toast(`~${nutrition.kcal} kcal geschätzt`);
-      } else {
-        toast('Keine Nährwerte erkannt');
-      }
+      const nutrition = await computeNutrition(parsed.cleanText, parsed.mealType);
+      entry.nutrition = nutrition;
+      // A pure guess (no match at all) gets no traffic-light color — we
+      // have no real information about what was actually eaten.
+      entry.trafficLight = nutrition.estimated ? null : classifyTrafficLight(nutrition);
+      renderCurrentView();
+      queueSave(meals);
+      toast(nutrition.estimated ? `≈${nutrition.kcal} kcal (grober Richtwert)` : `~${nutrition.kcal} kcal geschätzt`);
     } catch (e) {
       console.error('Nährwert-Schätzung fehlgeschlagen:', e);
       toast('Nährwerte konnten nicht geladen werden');
