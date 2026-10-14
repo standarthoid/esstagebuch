@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Esstagebuch</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light dark;
+    --sage-paper: #eef1ea;
+    --paper-card: #f8f6ef;
+    --ink: #1c231d;
+    --ink-soft: #5b6356;
+    --ink-faint: #8a9082;
+    --herb: #3f7355;
+    --herb-ink: #2c5440;
+    --amber: #c76a35;
+    --line: #dadfd2;
+    --danger: #b3503a;
+    --shadow: rgba(28, 35, 24, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --sage-paper: #141c16;
+      --paper-card: #1c2620;
+      --ink: #ecf0e8;
+      --ink-soft: #aab3a0;
+      --ink-faint: #707a68;
+      --herb: #6fa884;
+      --herb-ink: #bcdcc9;
+      --amber: #e2935e;
+      --line: #313d33;
+      --danger: #e2846c;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--sage-paper);
+    color: var(--ink);
+    font-family: "Work Sans", -apple-system, "Segoe UI", sans-serif;
+    min-height: 100dvh;
+  }
+
+  h1, h2, .display {
+    font-family: "Bricolage Grotesque", "Work Sans", sans-serif;
+    text-wrap: balance;
+  }
+
+  .mono {
+    font-family: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .app-shell {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 28px 20px 16px;
+    flex: none;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--herb-ink);
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    flex: none;
+  }
+
+  .sync-dot.on { background: var(--herb); }
+  .sync-dot.busy { background: var(--amber); }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .today {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  main {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 4px 20px 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .day-group {
+    margin-bottom: 20px;
+  }
+
+  .day-label {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 8px 2px;
+  }
+
+  .entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .entry {
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 52px 1fr auto;
+    align-items: start;
+    gap: 10px;
+    box-shadow: 0 1px 2px var(--shadow);
+  }
+
+  .entry time {
+    font-size: 12px;
+    color: var(--ink-faint);
+    padding-top: 2px;
+  }
+
+  .entry p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+
+  .entry button {
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    padding: 2px;
+    cursor: pointer;
+    line-height: 0;
+  }
+
+  .entry button:hover { color: var(--danger); }
+  .entry button:focus-visible { outline: 2px solid var(--herb); outline-offset: 2px; border-radius: 6px; }
+
+  .empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--ink-faint);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .empty strong {
+    display: block;
+    color: var(--ink-soft);
+    font-size: 16px;
+    margin-bottom: 6px;
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+
+  .hint {
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-faint);
+    padding: 0 24px 8px;
+  }
+
+  footer {
+    flex: none;
+    padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--sage-paper) 60%, transparent);
+  }
+
+  .composer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 26px;
+    padding: 6px 6px 6px 18px;
+    box-shadow: 0 2px 10px var(--shadow);
+  }
+
+  .composer input {
+    flex: 1;
+    border: none;
+    background: none;
+    color: var(--ink);
+    font-family: "Work Sans", sans-serif;
+    font-size: 15px;
+    padding: 10px 0;
+    min-width: 0;
+  }
+
+  .composer input::placeholder { color: var(--ink-faint); }
+  .composer input:focus { outline: none; }
+
+  .action-btn {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: none;
+    background: var(--herb);
+    color: var(--paper-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+
+  .action-btn:active { transform: scale(0.94); }
+  .action-btn:focus-visible { outline: 2px solid var(--herb-ink); outline-offset: 3px; }
+  .action-btn[disabled] { background: var(--ink-faint); cursor: default; }
+
+  .action-btn.listening { background: var(--amber); }
+
+  .action-btn.listening::before {
+    content: "";
+    position: absolute;
+    inset: -6px;
+    border-radius: 50%;
+    border: 2px solid var(--amber);
+    animation: pulse 1.4s ease-out infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .action-btn.listening::before { animation: none; }
+  }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 100px;
+    transform: translate(-50%, 8px);
+    background: var(--ink);
+    color: var(--sage-paper);
+    font-size: 13px;
+    padding: 9px 16px;
+    border-radius: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    max-width: calc(100% - 40px);
+    text-align: center;
+    z-index: 20;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  .connect-gate {
+    position: fixed;
+    inset: 0;
+    background: var(--sage-paper);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 32px;
+    text-align: center;
+    z-index: 30;
+  }
+
+  .connect-gate.hidden { display: none; }
+
+  .connect-gate .mark {
+    font-size: 40px;
+  }
+
+  .connect-gate p {
+    color: var(--ink-soft);
+    font-size: 14px;
+    max-width: 320px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .connect-btn {
+    background: var(--herb);
+    color: var(--paper-card);
+    border: none;
+    border-radius: 24px;
+    padding: 13px 26px;
+    font-family: "Work Sans", sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .connect-btn:focus-visible { outline: 2px solid var(--herb-ink); outline-offset: 3px; }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <header>
+    <p class="eyebrow"><span class="sync-dot" id="syncDot"></span>Esstagebuch · Dropbox</p>
+    <h1>Was hast du gegessen?</h1>
+    <p class="today mono" id="todayLabel"></p>
+  </header>
+
+  <main id="list"></main>
+
+  <footer>
+    <p class="hint" id="supportHint" hidden>Spracheingabe wird von diesem Browser nicht unterstützt — tippe oder nutze das Diktier-Mikrofon deiner Tastatur.</p>
+    <form class="composer" id="composer">
+      <input id="textInput" type="text" placeholder="z. B. Linsensuppe mit Joghurt" autocomplete="off" />
+      <button type="submit" class="action-btn" id="actionBtn" aria-label="Mahlzeit per Sprache hinzufügen">
+        <svg id="iconMic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>
+        <svg id="iconSend" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </form>
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="connect-gate" id="connectGate">
+  <div class="mark">🍽️</div>
+  <h1 style="font-size:22px;margin:0;">Esstagebuch</h1>
+  <p>Deine Mahlzeiten werden in einer Datei in deiner eigenen Dropbox gespeichert — damit sind sie auf jedem Gerät verfügbar.</p>
+  <button class="connect-btn" id="connectBtn" type="button">Mit Dropbox verbinden</button>
+  <p class="hint" id="connectError" style="display:none;color:var(--danger);"></p>
+</div>
+
+<script>
+  // ---------------------------------------------------------------------
+  // Dropbox app config — App Key is a public client id (PKCE, no secret).
+  // Must exactly match the redirect URI registered in the Dropbox App Console.
+  // ---------------------------------------------------------------------
+  const DROPBOX_APP_KEY = 'REPLACE_WITH_DROPBOX_APP_KEY';
+  const REDIRECT_URI = 'https://standarthoid.github.io/esstagebuch/';
+  const DATA_PATH = '/meals.json';
+
+  const listEl = document.getElementById('list');
+  const todayLabel = document.getElementById('todayLabel');
+  const composer = document.getElementById('composer');
+  const textInput = document.getElementById('textInput');
+  const actionBtn = document.getElementById('actionBtn');
+  const iconMic = document.getElementById('iconMic');
+  const iconSend = document.getElementById('iconSend');
+  const supportHint = document.getElementById('supportHint');
+  const toastEl = document.getElementById('toast');
+  const connectGate = document.getElementById('connectGate');
+  const connectBtn = document.getElementById('connectBtn');
+  const connectError = document.getElementById('connectError');
+  const syncDot = document.getElementById('syncDot');
+
+  todayLabel.textContent = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  function setSync(state) {
+    syncDot.classList.remove('on', 'busy');
+    if (state === 'on') syncDot.classList.add('on');
+    if (state === 'busy') syncDot.classList.add('busy');
+  }
+
+  function dayKey(iso) { return new Date(iso).toDateString(); }
+
+  function dayLabel(iso) {
+    const d = new Date(iso);
+    const now = new Date();
+    const startOf = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diffDays = Math.round((startOf(now) - startOf(d)) / 86400000);
+    if (diffDays === 0) return 'Heute';
+    if (diffDays === 1) return 'Gestern';
+    return new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+  }
+
+  function timeLabel(iso) {
+    return new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function sortDesc(meals) {
+    return meals.slice().sort((a, b) => new Date(b.time) - new Date(a.time));
+  }
+
+  function render(meals) {
+    if (!meals.length) {
+      listEl.innerHTML = '<div class="empty"><strong>Noch nichts notiert</strong>Sprich eine Mahlzeit ins Mikrofon oder tippe sie unten ein.</div>';
+      return;
+    }
+    const groups = new Map();
+    for (const m of meals) {
+      const k = dayKey(m.time);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(m);
+    }
+    let html = '';
+    for (const [, items] of groups) {
+      html += `<div class="day-group"><p class="day-label">${dayLabel(items[0].time)}</p><div class="entries">`;
+      for (const m of items) {
+        html += `<div class="entry"><time class="mono">${timeLabel(m.time)}</time><p>${escapeHtml(m.text)}</p><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div>`;
+      }
+      html += '</div></div>';
+    }
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('[data-delete]').forEach(btn => {
+      btn.addEventListener('click', () => deleteMeal(btn.getAttribute('data-delete')));
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // Local cache — instant first paint + a buffer in case a save fails.
+  // ---------------------------------------------------------------------
+  const CACHE_KEY = 'esstagebuch_cache_v1';
+  const AUTH_KEY = 'esstagebuch_dropbox_auth_v1';
+
+  function loadCache() {
+    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveCache(meals) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(meals)); } catch (e) {}
+  }
+
+  let meals = loadCache();
+  render(sortDesc(meals));
+
+  // ---------------------------------------------------------------------
+  // Dropbox OAuth2 — Authorization Code + PKCE (no client secret needed).
+  // ---------------------------------------------------------------------
+  function b64url(bytes) {
+    return btoa(String.fromCharCode(...new Uint8Array(bytes)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function randomVerifier() {
+    const arr = new Uint8Array(64);
+    crypto.getRandomValues(arr);
+    return b64url(arr.buffer);
+  }
+
+  async function challengeFor(verifier) {
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    return b64url(digest);
+  }
+
+  function loadAuth() {
+    try { return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); }
+    catch (e) { return null; }
+  }
+  function saveAuth(auth) {
+    try { localStorage.setItem(AUTH_KEY, JSON.stringify(auth)); } catch (e) {}
+  }
+  function clearAuth() {
+    try { localStorage.removeItem(AUTH_KEY); } catch (e) {}
+  }
+
+  let auth = loadAuth();
+
+  async function beginDropboxLogin() {
+    const verifier = randomVerifier();
+    sessionStorage.setItem('dbx_verifier', verifier);
+    const challenge = await challengeFor(verifier);
+    const url = new URL('https://www.dropbox.com/oauth2/authorize');
+    url.searchParams.set('client_id', DROPBOX_APP_KEY);
+    url.searchParams.set('response_type', 'code');
+    url.searchParams.set('code_challenge', challenge);
+    url.searchParams.set('code_challenge_method', 'S256');
+    url.searchParams.set('redirect_uri', REDIRECT_URI);
+    url.searchParams.set('token_access_type', 'offline');
+    window.location.href = url.toString();
+  }
+
+  async function exchangeCodeForToken(code) {
+    const verifier = sessionStorage.getItem('dbx_verifier') || '';
+    const body = new URLSearchParams({
+      code,
+      grant_type: 'authorization_code',
+      client_id: DROPBOX_APP_KEY,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: verifier,
+    });
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    if (!res.ok) throw new Error('token_exchange_failed');
+    const json = await res.json();
+    auth = {
+      access_token: json.access_token,
+      refresh_token: json.refresh_token,
+      expires_at: Date.now() + (json.expires_in - 60) * 1000,
+    };
+    saveAuth(auth);
+  }
+
+  async function refreshAccessToken() {
+    if (!auth || !auth.refresh_token) throw new Error('no_refresh_token');
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: auth.refresh_token,
+      client_id: DROPBOX_APP_KEY,
+    });
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    if (!res.ok) throw new Error('token_refresh_failed');
+    const json = await res.json();
+    auth.access_token = json.access_token;
+    auth.expires_at = Date.now() + (json.expires_in - 60) * 1000;
+    saveAuth(auth);
+  }
+
+  async function ensureFreshToken() {
+    if (!auth) throw new Error('not_authenticated');
+    if (Date.now() >= auth.expires_at) await refreshAccessToken();
+    return auth.access_token;
+  }
+
+  // ---------------------------------------------------------------------
+  // Dropbox file storage — the whole list lives in one JSON file.
+  // ---------------------------------------------------------------------
+  async function downloadMeals() {
+    const token = await ensureFreshToken();
+    const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH }),
+      },
+    });
+    if (res.status === 409) return []; // file does not exist yet
+    if (!res.ok) throw new Error('download_failed');
+    const text = await res.text();
+    try { return JSON.parse(text); } catch (e) { return []; }
+  }
+
+  async function uploadMeals(data) {
+    const token = await ensureFreshToken();
+    const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH, mode: 'overwrite' }),
+        'Content-Type': 'application/octet-stream',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('upload_failed');
+  }
+
+  let saveQueue = Promise.resolve();
+  function queueSave(data) {
+    saveCache(data);
+    setSync('busy');
+    saveQueue = saveQueue
+      .then(() => uploadMeals(data))
+      .then(() => setSync('on'))
+      .catch(() => {
+        setSync('off');
+        toast('Konnte nicht mit Dropbox synchronisieren.');
+      });
+    return saveQueue;
+  }
+
+  window.addEventListener('online', () => { if (auth) queueSave(meals); });
+
+  async function addMeal(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    meals.push({
+      id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      text: trimmed,
+      time: new Date().toISOString(),
+    });
+    render(sortDesc(meals));
+    queueSave(meals);
+    toast('Hinzugefügt');
+  }
+
+  async function deleteMeal(id) {
+    meals = meals.filter(m => m.id !== id);
+    render(sortDesc(meals));
+    queueSave(meals);
+  }
+
+  // ---------------------------------------------------------------------
+  // Boot: handle OAuth redirect, then gate on auth state.
+  // ---------------------------------------------------------------------
+  async function boot() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    const oauthError = params.get('error_description') || params.get('error');
+
+    if (code) {
+      history.replaceState(null, '', REDIRECT_URI);
+      try {
+        await exchangeCodeForToken(code);
+      } catch (e) {
+        connectError.textContent = 'Verbindung mit Dropbox fehlgeschlagen. Bitte erneut versuchen.';
+        connectError.style.display = 'block';
+      }
+    } else if (oauthError) {
+      history.replaceState(null, '', REDIRECT_URI);
+      connectError.textContent = 'Dropbox-Verbindung abgebrochen.';
+      connectError.style.display = 'block';
+    }
+
+    if (!auth) {
+      connectGate.classList.remove('hidden');
+      setSync('off');
+      return;
+    }
+
+    connectGate.classList.add('hidden');
+    setSync('busy');
+    try {
+      const remote = await downloadMeals();
+      meals = remote;
+      saveCache(meals);
+      render(sortDesc(meals));
+      setSync('on');
+    } catch (e) {
+      setSync('off');
+      toast('Offline — zeige zuletzt gespeicherten Stand.');
+    }
+  }
+
+  connectBtn.addEventListener('click', () => {
+    connectError.style.display = 'none';
+    beginDropboxLogin();
+  });
+
+  boot();
+
+  // ---------------------------------------------------------------------
+  // Speech recognition (unchanged): Chrome/Android in-page, otherwise
+  // the device keyboard's own dictation works in the text field.
+  // ---------------------------------------------------------------------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
+
+  function setListening(on) {
+    listening = on;
+    actionBtn.classList.toggle('listening', on);
+  }
+
+  function updateActionIcon() {
+    const hasText = textInput.value.trim().length > 0;
+    iconMic.hidden = hasText;
+    iconSend.hidden = !hasText;
+  }
+
+  if (SR) {
+    recognition = new SR();
+    recognition.lang = 'de-DE';
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event) => {
+      let finalText = '';
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const r = event.results[i];
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      textInput.value = finalText || interim;
+      if (finalText.trim()) {
+        addMeal(finalText);
+        textInput.value = '';
+        updateActionIcon();
+      }
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+      if (!textInput.value.trim()) updateActionIcon();
+    };
+
+    recognition.onerror = (event) => {
+      setListening(false);
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        toast('Mikrofonzugriff wurde nicht erlaubt.');
+      } else if (event.error !== 'no-speech' && event.error !== 'aborted') {
+        toast('Spracheingabe nicht möglich.');
+      }
+      updateActionIcon();
+    };
+  } else {
+    supportHint.hidden = false;
+  }
+
+  composer.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const hasText = textInput.value.trim().length > 0;
+    if (hasText) {
+      addMeal(textInput.value);
+      textInput.value = '';
+      updateActionIcon();
+      return;
+    }
+    if (!recognition) return;
+    if (listening) {
+      recognition.stop();
+    } else {
+      setListening(true);
+      try { recognition.start(); } catch (e) { setListening(false); }
+    }
+  });
+
+  textInput.addEventListener('input', updateActionIcon);
+  updateActionIcon();
+</script>
+</body>
+</html>
