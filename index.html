@@ -931,8 +931,9 @@
   }
 
   // ---------------------------------------------------------------------
-  // Parse a spoken/typed entry for an explicit clock time, "gestern", or
-  // a meal-type word ("Frühstück" etc.) so the entry sorts into the right
+  // Parse a spoken/typed entry for a date ("3. Oktober", "03.10.",
+  // "letzten Montag", "vorgestern" …), an explicit clock time, or a
+  // meal-type word ("Frühstück" etc.) so the entry sorts into the right
   // spot instead of always landing at "now".
   // ---------------------------------------------------------------------
   const MEAL_TYPES = [
@@ -942,16 +943,64 @@
     { re: /\bsnacks?\b|\bzwischenmahlzeit\b|\bzwischendurch\b|\bnaschen\b/i, label: 'Snack', h: null, m: null },
   ];
 
+  const MONTH_NAMES = ['januar', 'februar', 'märz', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'dezember'];
+  const WEEKDAY_NAMES = ['sonntag', 'montag', 'dienstag', 'mittwoch', 'donnerstag', 'freitag', 'samstag']; // matches Date#getDay()
+
+  // Mutates `date` to the day the text refers to, and returns the text with
+  // the matched date phrase removed. Tries the most specific pattern first;
+  // the first one that matches wins.
+  function applyDateHint(text, date) {
+    let m = text.match(/\b(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\.?(?!\s*uhr)/i);
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = parseInt(m[2], 10) - 1;
+      const year = m[3] ? parseInt(m[3], 10) : date.getFullYear();
+      if (day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+        date.setFullYear(year, month, day);
+        if (!m[3] && date > new Date()) date.setFullYear(date.getFullYear() - 1);
+        return text.replace(m[0], ' ');
+      }
+    }
+
+    m = text.match(new RegExp('\\b(\\d{1,2})\\.?\\s*(' + MONTH_NAMES.join('|') + ')\\b(?:\\s+(\\d{4}))?', 'i'));
+    if (m) {
+      const day = parseInt(m[1], 10);
+      const month = MONTH_NAMES.indexOf(m[2].toLowerCase());
+      const year = m[3] ? parseInt(m[3], 10) : date.getFullYear();
+      date.setFullYear(year, month, day);
+      if (!m[3] && date > new Date()) date.setFullYear(date.getFullYear() - 1);
+      return text.replace(m[0], ' ');
+    }
+
+    if (/\bvorgestern\b/i.test(text)) {
+      date.setDate(date.getDate() - 2);
+      return text.replace(/\bvorgestern\b/i, ' ');
+    }
+    if (/\bgestern\b/i.test(text)) {
+      date.setDate(date.getDate() - 1);
+      return text.replace(/\bgestern\b/i, ' ');
+    }
+    if (/\bheute\b/i.test(text)) {
+      return text.replace(/\bheute\b/i, ' ');
+    }
+
+    m = text.match(new RegExp('\\b(' + WEEKDAY_NAMES.join('|') + ')\\b', 'i'));
+    if (m) {
+      const target = WEEKDAY_NAMES.indexOf(m[1].toLowerCase());
+      const daysAgo = (date.getDay() - target + 7) % 7;
+      date.setDate(date.getDate() - daysAgo);
+      return text.replace(m[0], ' ');
+    }
+
+    return text;
+  }
+
   function parseEntryMeta(rawText) {
     let text = rawText.trim();
     const date = new Date();
     let mealType = null;
 
-    const yesterdayRe = /\bgestern\b/i;
-    if (yesterdayRe.test(text)) {
-      date.setDate(date.getDate() - 1);
-      text = text.replace(yesterdayRe, ' ');
-    }
+    text = applyDateHint(text, date);
 
     const timeRe = /\b(?:um\s+)?(\d{1,2})(?:[:.](\d{2}))?\s*uhr\b|\b([01]?\d|2[0-3]):([0-5]\d)\b/i;
     const tm = text.match(timeRe);
