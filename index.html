@@ -244,11 +244,30 @@
     display: block;
   }
 
-  .edit-label {
-    margin: 0 0 6px;
-    font-size: 11.5px;
-    color: var(--ink-faint);
+  .edit-when {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
   }
+
+  .edit-when input, .edit-when select {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--sage-paper);
+    color: var(--ink);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    padding: 6px 7px;
+  }
+
+  .edit-when select {
+    font-family: "Work Sans", sans-serif;
+    flex: 1;
+    min-width: 110px;
+  }
+
+  .edit-when input:focus, .edit-when select:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
 
   .edit-textarea {
     width: 100%;
@@ -1037,8 +1056,27 @@
   let editingId = null;
   let weightEditing = false;
 
+  const EDIT_MEAL_TYPE_OPTIONS = ['', 'Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
+
   function entryEditHtml(m) {
-    return `<div class="entry editing"><p class="edit-label mono">${timeLabel(m.time)}${m.mealType ? ' · ' + m.mealType : ''}</p><textarea class="edit-textarea" data-edit-input="${m.id}" rows="2">${escapeHtml(m.text)}</textarea><div class="edit-actions"><button type="button" class="edit-save" data-save="${m.id}">Speichern</button><button type="button" class="edit-cancel" data-cancel="1">Abbrechen</button></div></div>`;
+    const d = new Date(m.time);
+    const dateVal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const timeVal = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const typeOptions = EDIT_MEAL_TYPE_OPTIONS
+      .map(t => `<option value="${t}"${(m.mealType || '') === t ? ' selected' : ''}>${t || '– kein Typ –'}</option>`)
+      .join('');
+    return `<div class="entry editing">
+      <div class="edit-when">
+        <input type="date" class="edit-date" data-edit-date="${m.id}" value="${dateVal}" aria-label="Datum" />
+        <input type="time" class="edit-time" data-edit-time="${m.id}" value="${timeVal}" aria-label="Uhrzeit" />
+        <select class="edit-type" data-edit-type="${m.id}" aria-label="Mahlzeittyp">${typeOptions}</select>
+      </div>
+      <textarea class="edit-textarea" data-edit-input="${m.id}" rows="2">${escapeHtml(m.text)}</textarea>
+      <div class="edit-actions">
+        <button type="button" class="edit-save" data-save="${m.id}">Speichern</button>
+        <button type="button" class="edit-cancel" data-cancel="1">Abbrechen</button>
+      </div>
+    </div>`;
   }
 
   function entryCardHtml(m) {
@@ -1089,9 +1127,16 @@
     });
     const saveEdit = (id) => {
       const ta = listEl.querySelector(`[data-edit-input="${id}"]`);
-      const value = ta ? ta.value : '';
+      const dateEl = listEl.querySelector(`[data-edit-date="${id}"]`);
+      const timeEl = listEl.querySelector(`[data-edit-time="${id}"]`);
+      const typeEl = listEl.querySelector(`[data-edit-type="${id}"]`);
       editingId = null;
-      editMeal(id, value);
+      editMeal(id, {
+        text: ta ? ta.value : '',
+        dateStr: dateEl ? dateEl.value : '',
+        timeStr: timeEl ? timeEl.value : '',
+        mealType: typeEl ? typeEl.value : '',
+      });
     };
     listEl.querySelectorAll('[data-save]').forEach(btn => {
       btn.addEventListener('click', () => saveEdit(btn.getAttribute('data-save')));
@@ -1427,14 +1472,20 @@
     queueSave(currentState());
   }
 
-  async function editMeal(id, rawText) {
+  // Editing trusts the explicit date/time/type fields, not text parsing —
+  // that's the reliable way to move an entry to the right day, since voice
+  // transcripts don't always phrase dates the way the parser expects.
+  async function editMeal(id, { text, dateStr, timeStr, mealType }) {
     const entry = meals.find(m => m.id === id);
     if (!entry) return;
-    const fields = await buildMealFields(rawText);
-    if (!fields) return;
-    entry.text = fields.text;
-    entry.time = fields.time;
-    entry.mealType = fields.mealType;
+    const trimmed = (text || '').trim();
+    if (!trimmed || !dateStr || !timeStr) return;
+    const [y, mo, d] = dateStr.split('-').map(Number);
+    const [hh, mm] = timeStr.split(':').map(Number);
+    const newTime = new Date(y, mo - 1, d, hh, mm, 0, 0);
+    entry.text = trimmed;
+    entry.time = newTime.toISOString();
+    entry.mealType = mealType || null;
     entry.nutrition = null;
     entry.trafficLight = null;
     renderCurrentView();
