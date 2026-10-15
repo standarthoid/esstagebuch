@@ -290,6 +290,48 @@
 
   .edit-textarea:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
 
+  .edit-manual-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 8px 0 2px;
+    cursor: pointer;
+  }
+
+  .edit-manual-toggle input { accent-color: var(--herb); }
+
+  .edit-nutrition {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 6px 0 4px;
+  }
+
+  .edit-nutrition label {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .edit-nutrition input {
+    width: 68px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--sage-paper);
+    color: var(--ink);
+    padding: 6px 7px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+  }
+
+  .edit-nutrition input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
+
   .edit-actions {
     display: flex;
     gap: 8px;
@@ -734,7 +776,7 @@
     <button type="button" class="view-btn active" data-view="feed">Verlauf</button>
     <button type="button" class="view-btn" data-view="week">Woche</button>
   </div>
-  <p class="disclaimer">Kalorien &amp; Makros nach Möglichkeit aus der USDA-Nährwertdatenbank (~), sonst ein grober Richtwert (≈) — keine Ernährungsberatung.</p>
+  <p class="disclaimer">Kalorien &amp; Makros nach Möglichkeit aus der USDA-Nährwertdatenbank (~), sonst ein grober Richtwert (≈) oder von dir manuell gesetzt (=) — keine Ernährungsberatung.</p>
 
   <div class="weight-widget" id="weightWidget"></div>
 
@@ -1151,6 +1193,11 @@
 
   const EDIT_MEAL_TYPE_OPTIONS = ['', 'Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
 
+  // '=' marks a value the user set directly (trusted as-is), '~' a real
+  // USDA lookup, '≈' a rough guess with no match at all.
+  function nutritionSymbol(n) { return n.manual ? '=' : (n.estimated ? '≈' : '~'); }
+  function nutritionNote(n) { return n.manual ? ' · manuell' : (n.estimated ? ' · Richtwert' : ''); }
+
   function entryEditHtml(m) {
     const d = new Date(m.time);
     const dateVal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1158,6 +1205,8 @@
     const typeOptions = EDIT_MEAL_TYPE_OPTIONS
       .map(t => `<option value="${t}"${(m.mealType || '') === t ? ' selected' : ''}>${t || '– kein Typ –'}</option>`)
       .join('');
+    const isManual = !!(m.nutrition && m.nutrition.manual);
+    const n = m.nutrition || { kcal: '', carbs: '', fat: '', protein: '', fiber: '' };
     return `<div class="entry editing">
       <div class="edit-when">
         <input type="date" class="edit-date" data-edit-date="${m.id}" value="${dateVal}" aria-label="Datum" />
@@ -1165,6 +1214,14 @@
         <select class="edit-type" data-edit-type="${m.id}" aria-label="Mahlzeittyp">${typeOptions}</select>
       </div>
       <textarea class="edit-textarea" data-edit-input="${m.id}" rows="2">${escapeHtml(m.text)}</textarea>
+      <label class="edit-manual-toggle"><input type="checkbox" class="edit-manual-check" data-edit-manual="${m.id}"${isManual ? ' checked' : ''} /> Kalorien &amp; Makros manuell anpassen</label>
+      <div class="edit-nutrition" data-manual-fields="${m.id}"${isManual ? '' : ' hidden'}>
+        <label>kcal<input type="number" inputmode="numeric" data-edit-kcal="${m.id}" value="${n.kcal}" /></label>
+        <label>KH (g)<input type="number" step="0.1" inputmode="decimal" data-edit-carbs="${m.id}" value="${n.carbs}" /></label>
+        <label>Fett (g)<input type="number" step="0.1" inputmode="decimal" data-edit-fat="${m.id}" value="${n.fat}" /></label>
+        <label>Eiweiß (g)<input type="number" step="0.1" inputmode="decimal" data-edit-protein="${m.id}" value="${n.protein}" /></label>
+        <label>Ballaststoffe (g)<input type="number" step="0.1" inputmode="decimal" data-edit-fiber="${m.id}" value="${n.fiber}" /></label>
+      </div>
       <div class="edit-actions">
         <button type="button" class="edit-save" data-save="${m.id}">Speichern</button>
         <button type="button" class="edit-cancel" data-cancel="1">Abbrechen</button>
@@ -1177,7 +1234,7 @@
     const tlClass = m.trafficLight ? ' tl-' + m.trafficLight : '';
     const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType}</span>` : '';
     const macrosHtml = m.nutrition
-      ? `<p class="macros">${m.nutrition.estimated ? '≈' : '~'}${m.nutrition.kcal} kcal · ${m.nutrition.carbs}g KH · ${m.nutrition.fat}g Fett · ${m.nutrition.protein}g Eiweiß · ${m.nutrition.fiber}g Ballaststoffe${m.nutrition.estimated ? ' · Richtwert' : ''}</p>`
+      ? `<p class="macros">${nutritionSymbol(m.nutrition)}${m.nutrition.kcal} kcal · ${m.nutrition.carbs}g KH · ${m.nutrition.fat}g Fett · ${m.nutrition.protein}g Eiweiß · ${m.nutrition.fiber}g Ballaststoffe${nutritionNote(m.nutrition)}</p>`
       : '';
     return `<div class="entry${tlClass}"><time class="mono">${timeLabel(m.time)}</time><div>${typeHtml}<p>${escapeHtml(m.text)}</p>${macrosHtml}</div><div class="entry-actions"><button type="button" data-edit="${m.id}" aria-label="Eintrag bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div></div>`;
   }
@@ -1223,16 +1280,35 @@
       const dateEl = listEl.querySelector(`[data-edit-date="${id}"]`);
       const timeEl = listEl.querySelector(`[data-edit-time="${id}"]`);
       const typeEl = listEl.querySelector(`[data-edit-type="${id}"]`);
+      const manualEl = listEl.querySelector(`[data-edit-manual="${id}"]`);
+      const kcalEl = listEl.querySelector(`[data-edit-kcal="${id}"]`);
+      const carbsEl = listEl.querySelector(`[data-edit-carbs="${id}"]`);
+      const fatEl = listEl.querySelector(`[data-edit-fat="${id}"]`);
+      const proteinEl = listEl.querySelector(`[data-edit-protein="${id}"]`);
+      const fiberEl = listEl.querySelector(`[data-edit-fiber="${id}"]`);
       editingId = null;
       editMeal(id, {
         text: ta ? ta.value : '',
         dateStr: dateEl ? dateEl.value : '',
         timeStr: timeEl ? timeEl.value : '',
         mealType: typeEl ? typeEl.value : '',
+        manual: manualEl ? manualEl.checked : false,
+        kcal: kcalEl ? kcalEl.value : '',
+        carbs: carbsEl ? carbsEl.value : '',
+        fat: fatEl ? fatEl.value : '',
+        protein: proteinEl ? proteinEl.value : '',
+        fiber: fiberEl ? fiberEl.value : '',
       });
     };
     listEl.querySelectorAll('[data-save]').forEach(btn => {
       btn.addEventListener('click', () => saveEdit(btn.getAttribute('data-save')));
+    });
+    listEl.querySelectorAll('.edit-manual-check').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const id = cb.getAttribute('data-edit-manual');
+        const fields = listEl.querySelector(`[data-manual-fields="${id}"]`);
+        if (fields) fields.hidden = !cb.checked;
+      });
     });
     listEl.querySelectorAll('.edit-textarea').forEach(ta => {
       ta.addEventListener('input', () => autoGrow(ta));
@@ -1259,7 +1335,7 @@
     const withNutrition = items.filter(m => m.nutrition);
     if (withNutrition.length) {
       const biggest = withNutrition.reduce((a, b) => (b.nutrition.kcal > a.nutrition.kcal ? b : a));
-      tips.push(`Größter Posten: „${biggest.text}“ (${biggest.nutrition.estimated ? '≈' : '~'}${biggest.nutrition.kcal} kcal) — kleinere Portion oder leichtere Alternative bringt am meisten.`);
+      tips.push(`Größter Posten: „${biggest.text}“ (${nutritionSymbol(biggest.nutrition)}${biggest.nutrition.kcal} kcal) — kleinere Portion oder leichtere Alternative bringt am meisten.`);
     }
     const agg = withNutrition.reduce((acc, m) => {
       acc.kcal += m.nutrition.kcal; acc.fat += m.nutrition.fat;
@@ -1359,7 +1435,7 @@
       } else {
         for (const m of items) {
           const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType} · </span>` : '';
-          html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? (m.nutrition.estimated ? '≈' : '~') + m.nutrition.kcal : ''}</span></div>`;
+          html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? nutritionSymbol(m.nutrition) + m.nutrition.kcal : ''}</span></div>`;
         }
       }
       if (dayClass === ' over-goal') {
@@ -1424,7 +1500,7 @@
       for (const m of items) {
         const type = m.mealType ? `[${m.mealType}] ` : '';
         const n = m.nutrition;
-        const nStr = n ? ` — ${n.estimated ? '≈' : '~'}${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)${n.estimated ? ' [Richtwert]' : ''}` : '';
+        const nStr = n ? ` — ${nutritionSymbol(n)}${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)${n.manual ? ' [manuell]' : (n.estimated ? ' [Richtwert]' : '')}` : '';
         out += `  ${timeLabel(m.time)}  ${type}${m.text}${nStr}\n`;
         if (n) {
           dayTotal.kcal += n.kcal; dayTotal.carbs += n.carbs;
@@ -1665,7 +1741,9 @@
   // Editing trusts the explicit date/time/type fields, not text parsing —
   // that's the reliable way to move an entry to the right day, since voice
   // transcripts don't always phrase dates the way the parser expects.
-  async function editMeal(id, { text, dateStr, timeStr, mealType }) {
+  // When "manuell anpassen" is checked, the typed-in numbers are trusted
+  // as-is and never overwritten by a later automatic re-estimate.
+  async function editMeal(id, { text, dateStr, timeStr, mealType, manual, kcal, carbs, fat, protein, fiber }) {
     const entry = meals.find(m => m.id === id);
     if (!entry) return;
     const trimmed = (text || '').trim();
@@ -1676,6 +1754,25 @@
     entry.text = trimmed;
     entry.time = newTime.toISOString();
     entry.mealType = mealType || null;
+
+    if (manual) {
+      const kcalNum = parseFloat(kcal);
+      entry.nutrition = {
+        kcal: isFinite(kcalNum) && kcalNum >= 0 ? Math.round(kcalNum) : 0,
+        carbs: round1(parseFloat(carbs) || 0),
+        fat: round1(parseFloat(fat) || 0),
+        protein: round1(parseFloat(protein) || 0),
+        fiber: round1(parseFloat(fiber) || 0),
+        estimated: false,
+        manual: true,
+      };
+      entry.trafficLight = classifyTrafficLight(entry.nutrition);
+      renderCurrentView();
+      queueSave(currentState());
+      toast('Gespeichert');
+      return;
+    }
+
     entry.nutrition = null;
     entry.trafficLight = null;
     renderCurrentView();
