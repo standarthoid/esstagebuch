@@ -221,6 +221,12 @@
     font-family: "IBM Plex Mono", monospace;
   }
 
+  .entry-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
   .entry button {
     background: none;
     border: none;
@@ -230,8 +236,114 @@
     line-height: 0;
   }
 
-  .entry button:hover { color: var(--danger); }
+  .entry button[data-delete]:hover { color: var(--danger); }
+  .entry button[data-edit]:hover { color: var(--herb); }
   .entry button:focus-visible { outline: 2px solid var(--herb); outline-offset: 2px; border-radius: 6px; }
+
+  .entry.editing {
+    display: block;
+  }
+
+  .edit-label {
+    margin: 0 0 6px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+
+  .edit-textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--sage-paper);
+    color: var(--ink);
+    font-family: "Work Sans", sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
+    padding: 8px 10px;
+    resize: none;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .edit-textarea:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
+
+  .edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .edit-save, .edit-cancel {
+    font-family: "Work Sans", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  .edit-save {
+    background: var(--herb);
+    color: var(--paper-card);
+    border: none;
+  }
+
+  .edit-cancel {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .weight-widget {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px 12px;
+    font-size: 13px;
+  }
+
+  .weight-widget .weight-label {
+    flex: none;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .weight-widget .weight-value {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .weight-widget .weight-unit {
+    color: var(--ink-faint);
+    font-size: 12px;
+  }
+
+  .weight-widget button {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: "Work Sans", sans-serif;
+  }
+
+  .weight-widget input {
+    width: 64px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper-card);
+    color: var(--ink);
+    padding: 6px 8px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14px;
+  }
+
+  .weight-widget input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
 
   .empty {
     text-align: center;
@@ -307,6 +419,12 @@
     color: var(--ink-faint);
   }
 
+  .week-day-head .wd-weight {
+    margin-left: 8px;
+    color: var(--herb-ink);
+    font-weight: 600;
+  }
+
   .week-bar-track {
     height: 4px;
     background: var(--line);
@@ -362,7 +480,7 @@
 
   .composer {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 10px;
     background: var(--paper-card);
     border: 1px solid var(--line);
@@ -371,19 +489,23 @@
     box-shadow: 0 2px 10px var(--shadow);
   }
 
-  .composer input {
+  .composer textarea {
     flex: 1;
     border: none;
     background: none;
     color: var(--ink);
     font-family: "Work Sans", sans-serif;
     font-size: 15px;
+    line-height: 1.4;
     padding: 10px 0;
     min-width: 0;
+    resize: none;
+    max-height: 160px;
+    overflow-y: auto;
   }
 
-  .composer input::placeholder { color: var(--ink-faint); }
-  .composer input:focus { outline: none; }
+  .composer textarea::placeholder { color: var(--ink-faint); }
+  .composer textarea:focus { outline: none; }
 
   .action-btn {
     flex: none;
@@ -504,12 +626,14 @@
   </div>
   <p class="disclaimer">Kalorien &amp; Makros nach Möglichkeit aus der USDA-Nährwertdatenbank (~), sonst ein grober Richtwert (≈) — keine Ernährungsberatung.</p>
 
+  <div class="weight-widget" id="weightWidget"></div>
+
   <main id="list"></main>
 
   <footer>
     <p class="hint" id="supportHint" hidden>Spracheingabe wird von diesem Browser nicht unterstützt — tippe oder nutze das Diktier-Mikrofon deiner Tastatur.</p>
     <form class="composer" id="composer">
-      <input id="textInput" type="text" placeholder="z. B. Frühstück: Haferflocken mit Beeren" autocomplete="off" />
+      <textarea id="textInput" rows="1" placeholder="z. B. Frühstück: Haferflocken mit Beeren"></textarea>
       <button type="submit" class="action-btn" id="actionBtn" aria-label="Mahlzeit per Sprache hinzufügen">
         <svg id="iconMic" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="9" y1="22" x2="15" y2="22"/></svg>
         <svg id="iconSend" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
@@ -568,6 +692,13 @@
   }
 
   function round1(n) { return Math.round(n * 10) / 10; }
+
+  // Grows a textarea to fit its content (up to its CSS max-height, which
+  // then scrolls) — used for the composer and for inline entry editing.
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
 
   function dayKey(iso) { return new Date(iso).toDateString(); }
 
@@ -854,14 +985,21 @@
   // Rendering — two views over the same `meals` array.
   // ---------------------------------------------------------------------
   let viewMode = 'feed';
+  let editingId = null;
+  let weightEditing = false;
+
+  function entryEditHtml(m) {
+    return `<div class="entry editing"><p class="edit-label mono">${timeLabel(m.time)}${m.mealType ? ' · ' + m.mealType : ''}</p><textarea class="edit-textarea" data-edit-input="${m.id}" rows="2">${escapeHtml(m.text)}</textarea><div class="edit-actions"><button type="button" class="edit-save" data-save="${m.id}">Speichern</button><button type="button" class="edit-cancel" data-cancel="1">Abbrechen</button></div></div>`;
+  }
 
   function entryCardHtml(m) {
+    if (m.id === editingId) return entryEditHtml(m);
     const tlClass = m.trafficLight ? ' tl-' + m.trafficLight : '';
     const typeHtml = m.mealType ? `<span class="meal-type">${m.mealType}</span>` : '';
     const macrosHtml = m.nutrition
       ? `<p class="macros">${m.nutrition.estimated ? '≈' : '~'}${m.nutrition.kcal} kcal · ${m.nutrition.carbs}g KH · ${m.nutrition.fat}g Fett · ${m.nutrition.protein}g Eiweiß · ${m.nutrition.fiber}g Ballaststoffe${m.nutrition.estimated ? ' · Richtwert' : ''}</p>`
       : '';
-    return `<div class="entry${tlClass}"><time class="mono">${timeLabel(m.time)}</time><div>${typeHtml}<p>${escapeHtml(m.text)}</p>${macrosHtml}</div><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div>`;
+    return `<div class="entry${tlClass}"><time class="mono">${timeLabel(m.time)}</time><div>${typeHtml}<p>${escapeHtml(m.text)}</p>${macrosHtml}</div><div class="entry-actions"><button type="button" data-edit="${m.id}" aria-label="Eintrag bearbeiten"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><button type="button" data-delete="${m.id}" aria-label="Eintrag löschen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div></div>`;
   }
 
   function renderFeed(sorted) {
@@ -884,6 +1022,37 @@
     listEl.innerHTML = html;
     listEl.querySelectorAll('[data-delete]').forEach(btn => {
       btn.addEventListener('click', () => deleteMeal(btn.getAttribute('data-delete')));
+    });
+    listEl.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editingId = btn.getAttribute('data-edit');
+        renderCurrentView();
+        const ta = listEl.querySelector(`[data-edit-input="${editingId}"]`);
+        if (ta) {
+          autoGrow(ta);
+          ta.focus();
+          ta.setSelectionRange(ta.value.length, ta.value.length);
+        }
+      });
+    });
+    listEl.querySelectorAll('[data-cancel]').forEach(btn => {
+      btn.addEventListener('click', () => { editingId = null; renderCurrentView(); });
+    });
+    const saveEdit = (id) => {
+      const ta = listEl.querySelector(`[data-edit-input="${id}"]`);
+      const value = ta ? ta.value : '';
+      editingId = null;
+      editMeal(id, value);
+    };
+    listEl.querySelectorAll('[data-save]').forEach(btn => {
+      btn.addEventListener('click', () => saveEdit(btn.getAttribute('data-save')));
+    });
+    listEl.querySelectorAll('.edit-textarea').forEach(ta => {
+      ta.addEventListener('input', () => autoGrow(ta));
+      ta.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(ta.getAttribute('data-edit-input')); }
+        else if (e.key === 'Escape') { editingId = null; renderCurrentView(); }
+      });
     });
   }
 
@@ -928,7 +1097,10 @@
       const items = byDay.get(d.toDateString()) || [];
       const total = dayTotals[i];
       const pct = Math.round((total / maxKcal) * 100);
-      html += `<div class="week-day"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${total > 0 ? '~' + total + ' kcal' : ''}</span></div><div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
+      const w = findWeight(dateStrOf(d));
+      const kcalHtml = total > 0 ? '~' + total + ' kcal' : '';
+      const weightHtml = w ? `<span class="wd-weight">${w.kg} kg</span>` : '';
+      html += `<div class="week-day"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${kcalHtml}${weightHtml}</span></div><div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
       if (!items.length) {
         html += `<p class="week-empty">Keine Einträge</p>`;
       } else {
@@ -963,9 +1135,12 @@
     let out = `Esstagebuch — Woche vom ${dateFmt.format(days[0])} bis ${dateFmt.format(days[6])}\n`;
     out += '='.repeat(56) + '\n\n';
     const weekTotal = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
+    const weekWeights = [];
     for (const d of days) {
       const items = byDay.get(d.toDateString()) || [];
-      out += `${weekdayFmt.format(d)}, ${dateFmt.format(d)}\n`;
+      const w = findWeight(dateStrOf(d));
+      out += `${weekdayFmt.format(d)}, ${dateFmt.format(d)}${w ? `  —  Gewicht: ${w.kg} kg` : ''}\n`;
+      if (w) weekWeights.push(w.kg);
       if (!items.length) {
         out += '  (keine Einträge)\n\n';
         continue;
@@ -987,6 +1162,12 @@
     }
     out += '-'.repeat(56) + '\n';
     out += `Wochensumme: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
+    if (weekWeights.length >= 2) {
+      const delta = round1(weekWeights[weekWeights.length - 1] - weekWeights[0]);
+      out += `Gewichtsverlauf: ${weekWeights[0]} kg → ${weekWeights[weekWeights.length - 1]} kg (${delta >= 0 ? '+' : ''}${delta} kg)\n`;
+    } else if (weekWeights.length === 1) {
+      out += `Gewicht: ${weekWeights[0]} kg\n`;
+    }
     out += '\nHinweis: Kalorien- und Makronährstoffangaben stammen aus der USDA-Nährwertdatenbank, hochgerechnet auf eine typische Portionsgröße — keine exakte Messung oder Ernährungsberatung.\n';
 
     const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
@@ -1002,20 +1183,30 @@
 
   // ---------------------------------------------------------------------
   // Local cache — instant first paint + a buffer in case a save fails.
+  // Shape is { meals: [...], weights: [...] }; a bare array (the old
+  // format, before weight tracking) is migrated in place.
   // ---------------------------------------------------------------------
-  const CACHE_KEY = 'esstagebuch_cache_v2';
+  const CACHE_KEY = 'esstagebuch_cache_v3';
   const AUTH_KEY = 'esstagebuch_dropbox_auth_v1';
 
-  function loadCache() {
-    try { return JSON.parse(localStorage.getItem(CACHE_KEY) || '[]'); }
-    catch (e) { return []; }
-  }
-  function saveCache(data) {
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+  function normalizeState(raw) {
+    if (Array.isArray(raw)) return { meals: raw, weights: [] };
+    if (raw && typeof raw === 'object') return { meals: raw.meals || [], weights: raw.weights || [] };
+    return { meals: [], weights: [] };
   }
 
-  let meals = loadCache();
+  function loadCache() {
+    try { return normalizeState(JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')); }
+    catch (e) { return { meals: [], weights: [] }; }
+  }
+  function saveCache(state) {
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  let { meals, weights } = loadCache();
+  function currentState() { return { meals, weights }; }
   renderCurrentView();
+  renderWeightWidget();
 
   // ---------------------------------------------------------------------
   // Dropbox OAuth2 — Authorization Code + PKCE (no client secret needed).
@@ -1095,21 +1286,21 @@
   }
 
   // ---------------------------------------------------------------------
-  // Dropbox file storage — the whole list lives in one JSON file.
+  // Dropbox file storage — the whole state lives in one JSON file.
   // ---------------------------------------------------------------------
-  async function downloadMeals() {
+  async function downloadState() {
     const token = await ensureFreshToken();
     const res = await fetch('https://content.dropboxapi.com/2/files/download', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH }) },
     });
-    if (res.status === 409) return [];
+    if (res.status === 409) return { meals: [], weights: [] };
     if (!res.ok) throw new Error('download_failed');
     const text = await res.text();
-    try { return JSON.parse(text); } catch (e) { return []; }
+    try { return normalizeState(JSON.parse(text)); } catch (e) { return { meals: [], weights: [] }; }
   }
 
-  async function uploadMeals(data) {
+  async function uploadState(state) {
     const token = await ensureFreshToken();
     const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
       method: 'POST',
@@ -1118,17 +1309,17 @@
         'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH, mode: 'overwrite' }),
         'Content-Type': 'application/octet-stream',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(state),
     });
     if (!res.ok) throw new Error('upload_failed');
   }
 
   let saveQueue = Promise.resolve();
-  function queueSave(data) {
-    saveCache(data);
+  function queueSave(state) {
+    saveCache(state);
     setSync('busy');
     saveQueue = saveQueue
-      .then(() => uploadMeals(data))
+      .then(() => uploadState(state))
       .then(() => setSync('on'))
       .catch(() => {
         setSync('off');
@@ -1137,32 +1328,43 @@
     return saveQueue;
   }
 
-  window.addEventListener('online', () => { if (auth) queueSave(meals); });
+  window.addEventListener('online', () => { if (auth) queueSave(currentState()); });
 
-  async function addMeal(rawText) {
+  async function buildMealFields(rawText) {
     const parsed = parseEntryMeta(rawText);
-    if (!parsed.cleanText) return;
-    const entry = {
-      id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+    if (!parsed.cleanText) return null;
+    return {
       text: parsed.cleanText,
       time: parsed.time.toISOString(),
       mealType: parsed.mealType,
+    };
+  }
+
+  async function addMeal(rawText) {
+    const fields = await buildMealFields(rawText);
+    if (!fields) return;
+    const entry = {
+      id: 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+      ...fields,
       nutrition: null,
       trafficLight: null,
     };
     meals.push(entry);
     renderCurrentView();
-    queueSave(meals);
+    queueSave(currentState());
     toast('Hinzugefügt · schätze Nährwerte …');
+    await enrichMeal(entry);
+  }
 
+  async function enrichMeal(entry) {
     try {
-      const nutrition = await computeNutrition(parsed.cleanText, parsed.mealType);
+      const nutrition = await computeNutrition(entry.text, entry.mealType);
       entry.nutrition = nutrition;
       // A pure guess (no match at all) gets no traffic-light color — we
       // have no real information about what was actually eaten.
       entry.trafficLight = nutrition.estimated ? null : classifyTrafficLight(nutrition);
       renderCurrentView();
-      queueSave(meals);
+      queueSave(currentState());
       toast(nutrition.estimated ? `≈${nutrition.kcal} kcal (grober Richtwert)` : `~${nutrition.kcal} kcal geschätzt`);
     } catch (e) {
       console.error('Nährwert-Schätzung fehlgeschlagen:', e);
@@ -1173,7 +1375,77 @@
   async function deleteMeal(id) {
     meals = meals.filter(m => m.id !== id);
     renderCurrentView();
-    queueSave(meals);
+    queueSave(currentState());
+  }
+
+  async function editMeal(id, rawText) {
+    const entry = meals.find(m => m.id === id);
+    if (!entry) return;
+    const fields = await buildMealFields(rawText);
+    if (!fields) return;
+    entry.text = fields.text;
+    entry.time = fields.time;
+    entry.mealType = fields.mealType;
+    entry.nutrition = null;
+    entry.trafficLight = null;
+    renderCurrentView();
+    queueSave(currentState());
+    await enrichMeal(entry);
+  }
+
+  // ---------------------------------------------------------------------
+  // Weight — one value per calendar day; re-entering today just updates it.
+  // ---------------------------------------------------------------------
+  function todayDateStr() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function dateStrOf(iso) {
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  function findWeight(dateStr) { return weights.find(w => w.date === dateStr); }
+
+  function renderWeightWidget() {
+    const w = findWeight(todayDateStr());
+    const el = document.getElementById('weightWidget');
+    if (weightEditing) {
+      el.innerHTML = `<span class="weight-label">Gewicht heute</span><input id="weightInput" type="number" step="0.1" inputmode="decimal" placeholder="z. B. 68.4" value="${w ? w.kg : ''}" /><span class="weight-unit">kg</span><button type="button" id="weightSave">Speichern</button><button type="button" id="weightCancelBtn">Abbrechen</button>`;
+      const input = document.getElementById('weightInput');
+      const save = () => {
+        const val = parseFloat(String(input.value).replace(',', '.'));
+        weightEditing = false;
+        if (isFinite(val) && val > 0) saveWeight(val);
+        else renderWeightWidget();
+      };
+      document.getElementById('weightSave').addEventListener('click', save);
+      document.getElementById('weightCancelBtn').addEventListener('click', () => { weightEditing = false; renderWeightWidget(); });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+      input.focus();
+    } else if (w) {
+      el.innerHTML = `<span class="weight-label">Gewicht heute</span><span class="weight-value mono">${w.kg} kg</span><button type="button" id="weightEditBtn">Ändern</button>`;
+      document.getElementById('weightEditBtn').addEventListener('click', () => { weightEditing = true; renderWeightWidget(); });
+    } else {
+      el.innerHTML = `<span class="weight-label">Gewicht heute</span><button type="button" id="weightAddBtn">Eintragen</button>`;
+      document.getElementById('weightAddBtn').addEventListener('click', () => { weightEditing = true; renderWeightWidget(); });
+    }
+  }
+
+  function saveWeight(kg) {
+    const todayStr = todayDateStr();
+    const existing = findWeight(todayStr);
+    if (existing) {
+      existing.kg = round1(kg);
+      existing.time = new Date().toISOString();
+    } else {
+      weights.push({ id: 'w_' + Date.now(), date: todayStr, kg: round1(kg), time: new Date().toISOString() });
+    }
+    renderWeightWidget();
+    if (viewMode === 'week') renderCurrentView();
+    queueSave(currentState());
+    toast('Gewicht gespeichert');
   }
 
   // ---------------------------------------------------------------------
@@ -1206,9 +1478,12 @@
     connectGate.classList.add('hidden');
     setSync('busy');
     try {
-      meals = await downloadMeals();
-      saveCache(meals);
+      const state = await downloadState();
+      meals = state.meals;
+      weights = state.weights;
+      saveCache(currentState());
       renderCurrentView();
+      renderWeightWidget();
       setSync('on');
     } catch (e) {
       setSync('off');
@@ -1264,6 +1539,7 @@
         else interim += r[0].transcript;
       }
       textInput.value = (sessionFinal + (interim ? ' ' + interim : '')).trim();
+      autoGrow(textInput);
       updateActionIcon();
     };
 
@@ -1274,6 +1550,7 @@
       if (text) {
         addMeal(text);
         textInput.value = '';
+        autoGrow(textInput);
         updateActionIcon();
       }
     };
@@ -1300,6 +1577,7 @@
     if (hasText) {
       addMeal(textInput.value);
       textInput.value = '';
+      autoGrow(textInput);
       updateActionIcon();
       return;
     }
@@ -1309,7 +1587,13 @@
     try { recognition.start(); } catch (e) { setListening(false); }
   });
 
-  textInput.addEventListener('input', updateActionIcon);
+  textInput.addEventListener('input', () => { autoGrow(textInput); updateActionIcon(); });
+  textInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      composer.requestSubmit();
+    }
+  });
   updateActionIcon();
 </script>
 </body>
