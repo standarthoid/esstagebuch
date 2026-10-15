@@ -24,6 +24,8 @@
     --tl-good: #4c8c5f;
     --tl-warn: #b4902a;
     --tl-bad: #b3503a;
+    --tl-good-bg: #e3efe6;
+    --tl-bad-bg: #f5e3de;
     --shadow: rgba(28, 35, 24, 0.08);
   }
 
@@ -42,6 +44,8 @@
       --tl-good: #6fa884;
       --tl-warn: #d9b35c;
       --tl-bad: #e2846c;
+      --tl-good-bg: #1f2e24;
+      --tl-bad-bg: #2e211c;
       --shadow: rgba(0, 0, 0, 0.35);
     }
   }
@@ -389,8 +393,10 @@
 
   .week-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     padding: 4px 2px 14px;
   }
 
@@ -399,7 +405,14 @@
     margin: 0;
   }
 
-  .export-btn {
+  .week-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .export-btn, .goal-control button, .wd-weight-btn {
     background: none;
     border: 1px solid var(--line);
     color: var(--ink-soft);
@@ -410,9 +423,41 @@
     font-family: "Work Sans", sans-serif;
   }
 
-  .export-btn:focus-visible { outline: 2px solid var(--herb-ink); outline-offset: 2px; }
+  .export-btn:focus-visible, .goal-control button:focus-visible, .wd-weight-btn:focus-visible {
+    outline: 2px solid var(--herb-ink); outline-offset: 2px;
+  }
 
-  .week-day { margin-bottom: 16px; }
+  .goal-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-faint);
+  }
+
+  .goal-control input {
+    width: 64px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper-card);
+    color: var(--ink);
+    padding: 6px 8px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+  }
+
+  .goal-control input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
+
+  .week-day {
+    margin-bottom: 16px;
+    border-radius: 14px;
+    padding: 8px 10px 2px;
+    margin-left: -10px;
+    margin-right: -10px;
+  }
+
+  .week-day.under-goal { background: var(--tl-good-bg); }
+  .week-day.over-goal { background: var(--tl-bad-bg); }
 
   .week-day-head {
     display: flex;
@@ -436,12 +481,44 @@
   .week-day-head .wd-kcal {
     font-size: 12px;
     color: var(--ink-faint);
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .week-day-head .wd-weight {
-    margin-left: 8px;
+  .wd-weight-btn {
+    font-size: 11px;
+    padding: 3px 9px;
     color: var(--herb-ink);
     font-weight: 600;
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  .wd-weight-edit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .wd-weight-edit input {
+    width: 52px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper-card);
+    color: var(--ink);
+    padding: 4px 6px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+  }
+
+  .wd-weight-edit button {
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--ink-soft);
+    font-size: 11px;
+    padding: 4px 8px;
+    cursor: pointer;
   }
 
   .week-bar-track {
@@ -457,6 +534,20 @@
     background: var(--herb);
     border-radius: 2px;
   }
+
+  .day-tips {
+    margin: 2px 0 12px;
+    padding: 8px 10px;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .day-tips ul { margin: 0; padding-left: 16px; }
+  .day-tips li { margin-bottom: 2px; }
 
   .week-empty {
     font-size: 12.5px;
@@ -1055,6 +1146,8 @@
   let viewMode = 'feed';
   let editingId = null;
   let weightEditing = false;
+  let weekWeightEditingDate = null;
+  let goalEditing = false;
 
   const EDIT_MEAL_TYPE_OPTIONS = ['', 'Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
 
@@ -1158,6 +1251,58 @@
     return date;
   }
 
+  // Rough, rule-based suggestions from the day's own numbers — not a
+  // medical or nutrition-coaching claim, just pointing at the biggest
+  // lever and an obvious macro skew.
+  function generateTips(items, total, goal) {
+    const tips = [];
+    const withNutrition = items.filter(m => m.nutrition);
+    if (withNutrition.length) {
+      const biggest = withNutrition.reduce((a, b) => (b.nutrition.kcal > a.nutrition.kcal ? b : a));
+      tips.push(`Größter Posten: „${biggest.text}“ (${biggest.nutrition.estimated ? '≈' : '~'}${biggest.nutrition.kcal} kcal) — kleinere Portion oder leichtere Alternative bringt am meisten.`);
+    }
+    const agg = withNutrition.reduce((acc, m) => {
+      acc.kcal += m.nutrition.kcal; acc.fat += m.nutrition.fat;
+      acc.carbs += m.nutrition.carbs; acc.protein += m.nutrition.protein; acc.fiber += m.nutrition.fiber;
+      return acc;
+    }, { kcal: 0, fat: 0, carbs: 0, protein: 0, fiber: 0 });
+    if (agg.kcal > 0) {
+      if ((agg.fat * 9) / agg.kcal > 0.35) tips.push('Viel Fett im Verhältnis zu den Kalorien — fettige/frittierte Optionen seltener wählen.');
+      if ((agg.carbs * 4) / agg.kcal > 0.55 && agg.fiber < 20) tips.push('Viele Kohlenhydrate bei wenig Ballaststoffen — mehr Gemüse/Vollkorn statt raffinierter Kohlenhydrate.');
+      if (agg.protein < 50) tips.push('Wenig Eiweiß über den Tag — proteinreiche Lebensmittel sättigen bei weniger Kalorien.');
+    }
+    tips.push(`${Math.round(total - goal)} kcal über dem Ziel von ${goal} kcal.`);
+    return tips.slice(0, 4);
+  }
+
+  function renderGoalControl() {
+    if (goalEditing) {
+      return `<span class="goal-control"><input id="goalInput" type="number" inputmode="numeric" placeholder="z. B. 2000" value="${settings.dailyCalorieGoal || ''}" /> kcal/Tag <button type="button" id="goalSave">Speichern</button><button type="button" id="goalCancelBtn">Abbrechen</button></span>`;
+    }
+    if (settings.dailyCalorieGoal) {
+      return `<span class="goal-control">Ziel: ${settings.dailyCalorieGoal} kcal/Tag <button type="button" id="goalEditBtn">Ändern</button></span>`;
+    }
+    return `<span class="goal-control"><button type="button" id="goalEditBtn">Tagesziel festlegen</button></span>`;
+  }
+
+  function wireGoalControl() {
+    const editBtn = document.getElementById('goalEditBtn');
+    if (editBtn) editBtn.addEventListener('click', () => { goalEditing = true; renderCurrentView(); });
+    const cancelBtn = document.getElementById('goalCancelBtn');
+    if (cancelBtn) cancelBtn.addEventListener('click', () => { goalEditing = false; renderCurrentView(); });
+    const saveBtn = document.getElementById('goalSave');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        const input = document.getElementById('goalInput');
+        const val = parseInt(input.value, 10);
+        goalEditing = false;
+        settings.dailyCalorieGoal = (isFinite(val) && val > 0) ? val : null;
+        renderCurrentView();
+        queueSave(currentState());
+      });
+    }
+  }
+
   function renderWeek(all) {
     const weekStart = startOfWeek(new Date());
     const days = [];
@@ -1182,19 +1327,33 @@
 
     const dayTotals = days.map(d => (byDay.get(d.toDateString()) || []).reduce((sum, m) => sum + (m.nutrition ? m.nutrition.kcal : 0), 0));
     const maxKcal = Math.max(1, ...dayTotals);
+    const goal = settings.dailyCalorieGoal;
 
     const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
 
-    let html = `<div class="week-head"><h2>Diese Woche</h2><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div>`;
+    let html = `<div class="week-head"><h2>Diese Woche</h2><div class="week-head-actions">${renderGoalControl()}<button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
       const total = dayTotals[i];
       const pct = Math.round((total / maxKcal) * 100);
-      const w = findWeight(dateStrOf(d));
-      const kcalHtml = total > 0 ? '~' + total + ' kcal' : '';
-      const weightHtml = w ? `<span class="wd-weight">${w.kg} kg</span>` : '';
-      html += `<div class="week-day"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${kcalHtml}${weightHtml}</span></div><div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
+      const dStr = dateStrOf(d);
+      const w = findWeight(dStr);
+
+      let dayClass = '';
+      if (goal && total > 0) dayClass = total <= goal ? ' under-goal' : ' over-goal';
+
+      const kcalHtml = total > 0 ? `~${total} kcal` : '';
+      let weightHtml;
+      if (weekWeightEditingDate === dStr) {
+        weightHtml = `<span class="wd-weight-edit"><input id="weekWeightInput" type="number" step="0.1" inputmode="decimal" placeholder="kg" value="${w ? w.kg : ''}" /><button type="button" id="weekWeightSave" data-date="${dStr}">OK</button><button type="button" id="weekWeightCancel">✕</button></span>`;
+      } else if (w) {
+        weightHtml = `<button type="button" class="wd-weight-btn" data-weight-edit="${dStr}">${w.kg} kg</button>`;
+      } else {
+        weightHtml = `<button type="button" class="wd-weight-btn" data-weight-edit="${dStr}">+ Gewicht</button>`;
+      }
+
+      html += `<div class="week-day${dayClass}"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${kcalHtml}${weightHtml}</span></div><div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
       if (!items.length) {
         html += `<p class="week-empty">Keine Einträge</p>`;
       } else {
@@ -1203,10 +1362,32 @@
           html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? (m.nutrition.estimated ? '≈' : '~') + m.nutrition.kcal : ''}</span></div>`;
         }
       }
+      if (dayClass === ' over-goal') {
+        const tips = generateTips(items, total, goal);
+        html += `<div class="day-tips"><ul>${tips.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul></div>`;
+      }
       html += `</div>`;
     });
     listEl.innerHTML = html;
     document.getElementById('exportBtn').addEventListener('click', () => exportWeek(days, byDay));
+    wireGoalControl();
+    listEl.querySelectorAll('[data-weight-edit]').forEach(btn => {
+      btn.addEventListener('click', () => { weekWeightEditingDate = btn.getAttribute('data-weight-edit'); renderCurrentView(); });
+    });
+    const weekWeightInput = document.getElementById('weekWeightInput');
+    if (weekWeightInput) weekWeightInput.focus();
+    const weekWeightSave = document.getElementById('weekWeightSave');
+    if (weekWeightSave) {
+      weekWeightSave.addEventListener('click', () => {
+        const val = parseFloat(String(weekWeightInput.value).replace(',', '.'));
+        const dStr = weekWeightSave.getAttribute('data-date');
+        weekWeightEditingDate = null;
+        if (isFinite(val) && val > 0) saveWeightForDate(dStr, val);
+        else renderCurrentView();
+      });
+    }
+    const weekWeightCancel = document.getElementById('weekWeightCancel');
+    if (weekWeightCancel) weekWeightCancel.addEventListener('click', () => { weekWeightEditingDate = null; renderCurrentView(); });
   }
 
   function renderCurrentView() {
@@ -1250,7 +1431,10 @@
           dayTotal.fat += n.fat; dayTotal.protein += n.protein; dayTotal.fiber += n.fiber;
         }
       }
-      out += `  Tagessumme: ~${Math.round(dayTotal.kcal)} kcal (K ${round1(dayTotal.carbs)}g · F ${round1(dayTotal.fat)}g · P ${round1(dayTotal.protein)}g · B ${round1(dayTotal.fiber)}g)\n\n`;
+      const goalNote = settings.dailyCalorieGoal
+        ? (dayTotal.kcal <= settings.dailyCalorieGoal ? '  [Ziel eingehalten]' : `  [${Math.round(dayTotal.kcal - settings.dailyCalorieGoal)} kcal über Ziel]`)
+        : '';
+      out += `  Tagessumme: ~${Math.round(dayTotal.kcal)} kcal (K ${round1(dayTotal.carbs)}g · F ${round1(dayTotal.fat)}g · P ${round1(dayTotal.protein)}g · B ${round1(dayTotal.fiber)}g)${goalNote}\n\n`;
       weekTotal.kcal += dayTotal.kcal; weekTotal.carbs += dayTotal.carbs;
       weekTotal.fat += dayTotal.fat; weekTotal.protein += dayTotal.protein; weekTotal.fiber += dayTotal.fiber;
     }
@@ -1284,21 +1468,27 @@
   const AUTH_KEY = 'esstagebuch_dropbox_auth_v1';
 
   function normalizeState(raw) {
-    if (Array.isArray(raw)) return { meals: raw, weights: [] };
-    if (raw && typeof raw === 'object') return { meals: raw.meals || [], weights: raw.weights || [] };
-    return { meals: [], weights: [] };
+    if (Array.isArray(raw)) return { meals: raw, weights: [], settings: { dailyCalorieGoal: null } };
+    if (raw && typeof raw === 'object') {
+      return {
+        meals: raw.meals || [],
+        weights: raw.weights || [],
+        settings: { dailyCalorieGoal: (raw.settings && raw.settings.dailyCalorieGoal) || null },
+      };
+    }
+    return { meals: [], weights: [], settings: { dailyCalorieGoal: null } };
   }
 
   function loadCache() {
     try { return normalizeState(JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')); }
-    catch (e) { return { meals: [], weights: [] }; }
+    catch (e) { return normalizeState(null); }
   }
   function saveCache(state) {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(state)); } catch (e) {}
   }
 
-  let { meals, weights } = loadCache();
-  function currentState() { return { meals, weights }; }
+  let { meals, weights, settings } = loadCache();
+  function currentState() { return { meals, weights, settings }; }
   renderCurrentView();
   renderWeightWidget();
 
@@ -1388,10 +1578,10 @@
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Dropbox-API-Arg': JSON.stringify({ path: DATA_PATH }) },
     });
-    if (res.status === 409) return { meals: [], weights: [] };
+    if (res.status === 409) return normalizeState(null);
     if (!res.ok) throw new Error('download_failed');
     const text = await res.text();
-    try { return normalizeState(JSON.parse(text)); } catch (e) { return { meals: [], weights: [] }; }
+    try { return normalizeState(JSON.parse(text)); } catch (e) { return normalizeState(null); }
   }
 
   async function uploadState(state) {
@@ -1533,20 +1723,21 @@
     }
   }
 
-  function saveWeight(kg) {
-    const todayStr = todayDateStr();
-    const existing = findWeight(todayStr);
+  function saveWeightForDate(dateStr, kg) {
+    const existing = findWeight(dateStr);
     if (existing) {
       existing.kg = round1(kg);
       existing.time = new Date().toISOString();
     } else {
-      weights.push({ id: 'w_' + Date.now(), date: todayStr, kg: round1(kg), time: new Date().toISOString() });
+      weights.push({ id: 'w_' + Date.now(), date: dateStr, kg: round1(kg), time: new Date().toISOString() });
     }
     renderWeightWidget();
     if (viewMode === 'week') renderCurrentView();
     queueSave(currentState());
     toast('Gewicht gespeichert');
   }
+
+  function saveWeight(kg) { saveWeightForDate(todayDateStr(), kg); }
 
   // ---------------------------------------------------------------------
   // Boot: handle OAuth redirect, then gate on auth state.
@@ -1581,6 +1772,7 @@
       const state = await downloadState();
       meals = state.meals;
       weights = state.weights;
+      settings = state.settings;
       saveCache(currentState());
       renderCurrentView();
       renderWeightWidget();
