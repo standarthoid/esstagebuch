@@ -1083,6 +1083,13 @@
     'walnüsse': { query: 'nuts, walnuts, english', grams: 30 },
     'mandeln': { query: 'nuts, almonds', grams: 30 },
     'nüsse': { query: 'nuts, mixed nuts, with peanuts, oil roasted', grams: 30 },
+    'skyr': { query: 'yogurt, Icelandic, Skyr, plain', grams: 90 },
+    'chiapudding': { query: 'seeds, chia seeds, dried', grams: 20 },
+    'chiasamen': { query: 'seeds, chia seeds, dried', grams: 15 },
+    'kakaopulver': { query: 'cocoa, dry powder, unsweetened', grams: 8 },
+    'heidelbeeren': { query: 'blueberries, raw', grams: 80 },
+    'apfelmus': { query: 'applesauce, unsweetened', grams: 60 },
+    'apfelmangomus': { query: 'applesauce with mango, unsweetened', grams: 60 },
     'honig': { query: 'honey', grams: 21 },
     'marmelade': { query: 'preserves, jam', grams: 20 },
     'käse': { query: 'cheese, cheddar', grams: 30 },
@@ -1215,10 +1222,17 @@
       }
     }
     if (matched) {
+      // If only a small slice of the words in the description were actually
+      // recognized, the match is too thin to trust as "real" — e.g. a bowl
+      // with six ingredients where only one got matched would otherwise
+      // silently stand in for the whole meal. Downgrade those to a rough
+      // guess (no traffic-light color) instead of a confident result.
+      const letters = s => (s.match(/[a-zA-ZäöüÄÖÜß]/g) || []).length;
+      const coverage = 1 - (letters(remaining) / Math.max(1, letters(text)));
       return {
         kcal: Math.round(total.kcal), carbs: round1(total.carbs),
         fat: round1(total.fat), protein: round1(total.protein), fiber: round1(total.fiber),
-        estimated: false,
+        estimated: coverage < 0.4,
       };
     }
 
