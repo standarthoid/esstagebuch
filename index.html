@@ -120,6 +120,15 @@
     color: var(--ink-soft);
   }
 
+  .quote {
+    margin: 8px 0 0;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--herb-ink);
+    line-height: 1.5;
+    text-wrap: balance;
+  }
+
   .view-switch {
     display: flex;
     gap: 6px;
@@ -409,6 +418,126 @@
   }
 
   .weight-widget input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
+
+  .workout-widget {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 0 20px 14px;
+    font-size: 13px;
+  }
+
+  .workout-widget > .weight-label {
+    flex: none;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .workout-widget > button {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-family: "Work Sans", sans-serif;
+  }
+
+  .workout-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 6px 4px 10px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .workout-chip button {
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px;
+    line-height: 1;
+  }
+
+  .workout-chip button:hover { color: var(--danger); }
+
+  .workout-add {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .workout-add-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .workout-add-row select, .workout-add-row input {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper-card);
+    color: var(--ink);
+    padding: 7px 9px;
+    font-family: "Work Sans", sans-serif;
+    font-size: 13px;
+  }
+
+  .workout-add-row input { width: 80px; font-family: "IBM Plex Mono", monospace; }
+
+  .feeling-picker { display: flex; gap: 4px; }
+
+  .feeling-btn {
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 18px;
+    padding: 6px 9px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .feeling-btn.active { border-color: var(--herb); background: var(--tl-good-bg); }
+
+  .workout-add-actions { display: flex; gap: 8px; }
+
+  .workout-add-actions button {
+    font-family: "Work Sans", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 12px;
+    cursor: pointer;
+  }
+
+  #workoutSave { background: var(--herb); color: var(--paper-card); border: none; }
+  #workoutCancel { background: none; border: 1px solid var(--line); color: var(--ink-soft); font-weight: 500; }
+
+  .week-workouts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 2px 0 10px;
+  }
+
+  .workout-chip-sm {
+    font-size: 11px;
+    color: var(--ink-soft);
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 3px 8px;
+  }
 
   .empty {
     text-align: center;
@@ -770,6 +899,7 @@
     <p class="eyebrow"><span class="sync-dot" id="syncDot"></span>Esstagebuch · Dropbox</p>
     <h1>Was hast du gegessen?</h1>
     <p class="today mono" id="todayLabel"></p>
+    <p class="quote" id="dailyQuote"></p>
   </header>
 
   <div class="view-switch">
@@ -779,6 +909,7 @@
   <p class="disclaimer">Kalorien &amp; Makros nach Möglichkeit aus der USDA-Nährwertdatenbank (~), sonst ein grober Richtwert (≈) oder von dir manuell gesetzt (=) — keine Ernährungsberatung.</p>
 
   <div class="weight-widget" id="weightWidget"></div>
+  <div class="workout-widget" id="workoutWidget"></div>
 
   <main id="list"></main>
 
@@ -828,6 +959,45 @@
   const syncDot = document.getElementById('syncDot');
 
   todayLabel.textContent = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+
+  // A new quote each day (same one all day, cycles through the list).
+  const QUOTES = [
+    'Nicht jeder Tag muss perfekt sein — aber jeder Tag zählt, an dem du hinschaust.',
+    'Fortschritt zeigt sich nicht im Spiegel von heute, sondern in der Konsequenz von morgen.',
+    'Du musst nicht motiviert sein, um dranzubleiben — nur ehrlich zu dir selbst.',
+    'Ein Eintrag mehr ist ein Muster mehr, das du erkennen kannst.',
+    'Kleine, wiederholte Entscheidungen schlagen eine große, einmalige — jedes Mal.',
+    'Was du misst, verlierst du nicht aus den Augen.',
+    'Rückschläge sind Daten, keine Urteile.',
+    'Du baust kein Ergebnis — du baust eine Gewohnheit, die das Ergebnis mitbringt.',
+    'Heute zählt nur, dass du wieder hinschaust — nicht, dass alles stimmt.',
+    'Disziplin ist, weiterzumachen, wenn die Motivation schon zu Hause geblieben ist.',
+    'Dranbleiben schlägt Perfektion — jeden einzelnen Tag.',
+    'Der Unterschied zwischen Aufgeben und Erfolg ist meistens: noch ein Tag.',
+    'Du musst nicht schneller werden. Du musst nur drinbleiben.',
+    'Jede Mahlzeit, die du aufschreibst, ist ein kleines Stück Klarheit.',
+    'Konsistenz schlägt Intensität, wenn es ums Durchhalten geht.',
+    'Du kannst nicht kontrollieren, wie sich heute anfühlt — nur, ob du es festhältst.',
+    'Gewohnheiten werden nicht an guten Tagen gebaut, sondern an den mittelmäßigen.',
+    'Ein Blick zurück auf die Woche sagt mehr als ein Blick auf die Waage heute.',
+    'Du bist nicht im Rückstand. Du bist mittendrin.',
+    'Jeder Eintrag ist ein Beweis: Ich bleibe dran.',
+    'Nicht aufhören, wenn’s schwer wird — genau dann zählt’s.',
+    'Der beste Zeitpunkt weiterzumachen ist genau jetzt, nicht erst wenn’s leichter wird.',
+    'Du schreibst gerade deine eigene Erfolgsgeschichte — ein Eintrag nach dem anderen.',
+    'Ehrlich zu sich selbst zu sein ist der erste Trainingserfolg des Tages.',
+    'Zähl nicht die Tage, lass die Tage zählen.',
+    'Du musst heute nicht alles richtig machen. Nur dranbleiben.',
+    'Ein unperfekter Eintrag ist besser als gar keiner.',
+    'Bewegung fühlt sich nicht immer gut an — aber sie zahlt sich fast immer aus.',
+    'Was heute unbequem ist, wird morgen Routine.',
+    'Du bist schon weiter, als du am ersten Tag warst. Mach weiter.',
+  ];
+  function dayOfYear(d) {
+    const start = new Date(d.getFullYear(), 0, 0);
+    return Math.floor((d - start) / 86400000);
+  }
+  document.getElementById('dailyQuote').textContent = QUOTES[dayOfYear(new Date()) % QUOTES.length];
 
   let toastTimer;
   function toast(msg) {
@@ -1190,6 +1360,7 @@
   let weightEditing = false;
   let weekWeightEditingDate = null;
   let goalEditing = false;
+  let workoutAdding = false;
 
   const EDIT_MEAL_TYPE_OPTIONS = ['', 'Frühstück', 'Mittagessen', 'Abendessen', 'Snack'];
 
@@ -1438,6 +1609,10 @@
           html += `<div class="week-entry"><time class="mono">${timeLabel(m.time)}</time><span class="wt-text">${typeHtml}${escapeHtml(m.text)}</span><span class="wt-kcal mono">${m.nutrition ? nutritionSymbol(m.nutrition) + m.nutrition.kcal : ''}</span></div>`;
         }
       }
+      const dayWorkouts = workoutsForDate(dStr);
+      if (dayWorkouts.length) {
+        html += `<div class="week-workouts">${dayWorkouts.map(w => `<span class="workout-chip-sm">${escapeHtml(w.type)} · ${w.durationMin} min ${feelingEmoji(w.feeling)}</span>`).join('')}</div>`;
+      }
       if (dayClass === ' over-goal') {
         const tips = generateTips(items, total, goal);
         html += `<div class="day-tips"><ul>${tips.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul></div>`;
@@ -1492,6 +1667,9 @@
       const w = findWeight(dateStrOf(d));
       out += `${weekdayFmt.format(d)}, ${dateFmt.format(d)}${w ? `  —  Gewicht: ${w.kg} kg` : ''}\n`;
       if (w) weekWeights.push(w.kg);
+      for (const wo of workoutsForDate(dateStrOf(d))) {
+        out += `  Sport: ${wo.type}, ${wo.durationMin} min${wo.feeling ? ` (${feelingEmoji(wo.feeling)} ${feelingLabel(wo.feeling)})` : ''}\n`;
+      }
       if (!items.length) {
         out += '  (keine Einträge)\n\n';
         continue;
@@ -1544,15 +1722,16 @@
   const AUTH_KEY = 'esstagebuch_dropbox_auth_v1';
 
   function normalizeState(raw) {
-    if (Array.isArray(raw)) return { meals: raw, weights: [], settings: { dailyCalorieGoal: null } };
+    if (Array.isArray(raw)) return { meals: raw, weights: [], workouts: [], settings: { dailyCalorieGoal: null } };
     if (raw && typeof raw === 'object') {
       return {
         meals: raw.meals || [],
         weights: raw.weights || [],
+        workouts: raw.workouts || [],
         settings: { dailyCalorieGoal: (raw.settings && raw.settings.dailyCalorieGoal) || null },
       };
     }
-    return { meals: [], weights: [], settings: { dailyCalorieGoal: null } };
+    return { meals: [], weights: [], workouts: [], settings: { dailyCalorieGoal: null } };
   }
 
   function loadCache() {
@@ -1563,10 +1742,11 @@
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(state)); } catch (e) {}
   }
 
-  let { meals, weights, settings } = loadCache();
-  function currentState() { return { meals, weights, settings }; }
+  let { meals, weights, workouts, settings } = loadCache();
+  function currentState() { return { meals, weights, workouts, settings }; }
   renderCurrentView();
   renderWeightWidget();
+  renderWorkoutWidget();
 
   // ---------------------------------------------------------------------
   // Dropbox OAuth2 — Authorization Code + PKCE (no client secret needed).
@@ -1837,6 +2017,78 @@
   function saveWeight(kg) { saveWeightForDate(todayDateStr(), kg); }
 
   // ---------------------------------------------------------------------
+  // Workouts — type, duration, and how it felt; several per day allowed.
+  // ---------------------------------------------------------------------
+  const WORKOUT_TYPES = ['Laufen', 'Radfahren', 'Schwimmen', 'Krafttraining', 'Yoga', 'Wandern', 'Tanzen', 'Fußball', 'Sonstiges'];
+  const FEELING_SCALE = [
+    { v: 1, emoji: '😫', label: 'Sehr anstrengend' },
+    { v: 2, emoji: '😕', label: 'Durchwachsen' },
+    { v: 3, emoji: '😐', label: 'Okay' },
+    { v: 4, emoji: '🙂', label: 'Gut' },
+    { v: 5, emoji: '💪', label: 'Stark' },
+  ];
+  function feelingEmoji(v) { const f = FEELING_SCALE.find(f => f.v === v); return f ? f.emoji : ''; }
+  function feelingLabel(v) { const f = FEELING_SCALE.find(f => f.v === v); return f ? f.label : ''; }
+
+  function workoutsForDate(dateStr) { return workouts.filter(w => w.date === dateStr); }
+
+  function renderWorkoutWidget() {
+    const el = document.getElementById('workoutWidget');
+    const todays = workoutsForDate(todayDateStr());
+    const chips = todays.map(w => `<span class="workout-chip">${escapeHtml(w.type)} · ${w.durationMin} min ${feelingEmoji(w.feeling)}<button type="button" data-workout-delete="${w.id}" aria-label="Workout löschen">✕</button></span>`).join('');
+
+    if (workoutAdding) {
+      const typeOptions = WORKOUT_TYPES.map(t => `<option value="${t}">${t}</option>`).join('');
+      el.innerHTML = `<div class="workout-add">
+        <div class="workout-add-row">
+          <select id="workoutType">${typeOptions}</select>
+          <input id="workoutDuration" type="number" inputmode="numeric" placeholder="Min." />
+        </div>
+        <div class="feeling-picker" id="feelingPicker">${FEELING_SCALE.map(f => `<button type="button" class="feeling-btn" data-feeling="${f.v}" aria-label="${f.label}">${f.emoji}</button>`).join('')}</div>
+        <div class="workout-add-actions">
+          <button type="button" id="workoutSave">Speichern</button>
+          <button type="button" id="workoutCancel">Abbrechen</button>
+        </div>
+      </div>`;
+      let selectedFeeling = null;
+      document.querySelectorAll('.feeling-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.feeling-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedFeeling = parseInt(btn.getAttribute('data-feeling'), 10);
+        });
+      });
+      document.getElementById('workoutSave').addEventListener('click', () => {
+        const type = document.getElementById('workoutType').value;
+        const duration = parseInt(document.getElementById('workoutDuration').value, 10);
+        if (!isFinite(duration) || duration <= 0) { toast('Bitte Dauer in Minuten angeben.'); return; }
+        workouts.push({
+          id: 'wo_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          date: todayDateStr(), time: new Date().toISOString(),
+          type, durationMin: duration, feeling: selectedFeeling,
+        });
+        workoutAdding = false;
+        renderWorkoutWidget();
+        if (viewMode === 'week') renderCurrentView();
+        queueSave(currentState());
+        toast('Workout gespeichert');
+      });
+      document.getElementById('workoutCancel').addEventListener('click', () => { workoutAdding = false; renderWorkoutWidget(); });
+    } else {
+      el.innerHTML = `<span class="weight-label">Sport heute</span>${chips}<button type="button" id="workoutAddBtn">+ Workout</button>`;
+      document.getElementById('workoutAddBtn').addEventListener('click', () => { workoutAdding = true; renderWorkoutWidget(); });
+      el.querySelectorAll('[data-workout-delete]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          workouts = workouts.filter(w => w.id !== btn.getAttribute('data-workout-delete'));
+          renderWorkoutWidget();
+          if (viewMode === 'week') renderCurrentView();
+          queueSave(currentState());
+        });
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------------
   // Boot: handle OAuth redirect, then gate on auth state.
   // ---------------------------------------------------------------------
   async function boot() {
@@ -1869,10 +2121,12 @@
       const state = await downloadState();
       meals = state.meals;
       weights = state.weights;
+      workouts = state.workouts;
       settings = state.settings;
       saveCache(currentState());
       renderCurrentView();
       renderWeightWidget();
+      renderWorkoutWidget();
       setSync('on');
     } catch (e) {
       setSync('off');
