@@ -1090,6 +1090,24 @@
     'heidelbeeren': { query: 'blueberries, raw', grams: 80 },
     'apfelmus': { query: 'applesauce, unsweetened', grams: 60 },
     'apfelmangomus': { query: 'applesauce with mango, unsweetened', grams: 60 },
+    'himbeeren': { query: 'raspberries, raw', grams: 80 },
+    'preiselbeeren': { query: 'cranberries, raw', grams: 40 },
+    'nüssen': { query: 'nuts, mixed nuts, with peanuts, oil roasted', grams: 30 }, // dative plural of "Nüsse"
+    'mango': { query: 'mangos, raw', grams: 100 },
+    'bulgur': { query: 'bulgur, cooked', grams: 150 },
+    'essiggurken': { query: 'pickles, cucumber, sour', grams: 60 },
+    'essig': { query: 'vinegar, distilled', grams: 15 },
+    'öl': { query: 'oil, vegetable, sunflower, linoleic (less than 60%)', grams: 10 },
+    'zimt': { query: 'spices, cinnamon, ground', grams: 2 },
+    'radieschen': { query: 'radishes, raw', grams: 15 },
+    'latte macchiato': { query: 'coffee, cafe latte, with whole milk', grams: 250 },
+    'donauwelle': { query: 'cake, chocolate, commercially prepared, with chocolate frosting', grams: 70 },
+    'prinzenrolle': { query: 'cookies, chocolate sandwich, with creme filling', grams: 45 },
+    'doppelkekse': { query: 'cookies, chocolate sandwich, with creme filling', grams: 45 },
+    'obazda': { query: 'cheese spread, pasteurized process', grams: 50 },
+    'maasdamer': { query: 'cheese, swiss', grams: 30 },
+    'frikadelle': { query: 'meatballs, beef, frozen, cooked', grams: 70 },
+    'teewurst': { query: 'sausage, liverwurst, pork', grams: 30 },
     'honig': { query: 'honey', grams: 21 },
     'marmelade': { query: 'preserves, jam', grams: 20 },
     'käse': { query: 'cheese, cheddar', grams: 30 },
@@ -1152,6 +1170,13 @@
 
   function escapeRegex(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
+  // A whole-word match that also treats German umlauts/ß as word characters
+  // — plain \b doesn't, so a keyword starting or ending in ä/ö/ü/ß (like
+  // "öl") would otherwise never match at all.
+  function wordBoundaryRegex(key) {
+    return new RegExp('(?<![a-zA-ZäöüÄÖÜß])' + escapeRegex(key) + '(?![a-zA-ZäöüÄÖÜß])', 'gi');
+  }
+
   // Per-100g nutrient lookups are cached forever (food composition doesn't
   // change), so each ingredient only ever calls the API once.
   const USDA_CACHE_KEY = 'esstagebuch_usda_cache_v1';
@@ -1203,7 +1228,7 @@
     let matched = false;
     const total = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
     for (const key of FOOD_KEYS) {
-      const re = new RegExp('\\b' + escapeRegex(key) + '\\b', 'gi');
+      const re = wordBoundaryRegex(key);
       const hits = remaining.match(re);
       if (hits && hits.length) {
         const count = Math.min(3, hits.length);
