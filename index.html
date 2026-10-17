@@ -584,6 +584,33 @@
     flex-wrap: wrap;
   }
 
+  .weight-summary {
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px 6px;
+    margin-bottom: 16px;
+  }
+
+  .weight-summary-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+  }
+
+  .weight-summary-avg {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .weight-chart { width: 100%; height: auto; display: block; }
+  .weight-chart-line { stroke: var(--herb); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  .weight-chart-dot { fill: var(--herb); }
+  .weight-chart-value { font-family: "IBM Plex Mono", monospace; font-size: 9px; fill: var(--ink-soft); }
+  .weight-chart-day { font-family: "IBM Plex Mono", monospace; font-size: 8px; letter-spacing: 0.03em; text-transform: uppercase; fill: var(--ink-faint); }
+
   .export-btn, .goal-control button, .wd-weight-btn {
     background: none;
     border: 1px solid var(--line);
@@ -1663,6 +1690,50 @@
     }
   }
 
+  // A small inline sparkline of the week's weigh-ins, connecting whichever
+  // days actually have a value (gaps are simply skipped, not interpolated).
+  function weightChartSvg(series, dayLabels) {
+    const present = series.filter(v => v !== null);
+    if (!present.length) return '';
+    const w = 300, h = 86, padX = 20, topPad = 22, bottomPad = 16;
+    const min = Math.min(...present), max = Math.max(...present);
+    const range = Math.max(0.2, max - min);
+    const stepX = (w - padX * 2) / (series.length - 1);
+    const points = series.map((v, i) => {
+      if (v === null) return null;
+      const x = padX + stepX * i;
+      const y = topPad + (1 - (v - min) / range) * (h - topPad - bottomPad);
+      return { x, y, v };
+    });
+    const present2 = points.filter(Boolean);
+    const pathD = present2.map((p, i) => (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+    let svg = `<svg viewBox="0 0 ${w} ${h}" class="weight-chart" role="img" aria-label="Gewichtsverlauf der Woche">`;
+    if (present2.length > 1) svg += `<path d="${pathD}" class="weight-chart-line"/>`;
+    for (const p of present2) {
+      svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" class="weight-chart-dot"/>`;
+      svg += `<text x="${p.x.toFixed(1)}" y="${(p.y - 8).toFixed(1)}" text-anchor="middle" class="weight-chart-value">${p.v}</text>`;
+    }
+    dayLabels.forEach((label, i) => {
+      const x = padX + stepX * i;
+      svg += `<text x="${x}" y="${h - 4}" text-anchor="middle" class="weight-chart-day">${label}</text>`;
+    });
+    svg += `</svg>`;
+    return svg;
+  }
+
+  function renderWeightSummary(days) {
+    const series = days.map(d => { const w = findWeight(dateStrOf(d)); return w ? w.kg : null; });
+    const present = series.filter(v => v !== null);
+    if (!present.length) return '';
+    const avg = round1(present.reduce((a, b) => a + b, 0) / present.length);
+    const weekdayShort = new Intl.DateTimeFormat('de-DE', { weekday: 'short' });
+    const dayLabels = days.map(d => weekdayShort.format(d).replace('.', ''));
+    return `<div class="weight-summary">
+      <div class="weight-summary-head"><span class="weight-label">Ø Gewicht diese Woche</span><span class="weight-summary-avg mono">${avg} kg</span></div>
+      ${weightChartSvg(series, dayLabels)}
+    </div>`;
+  }
+
   function renderWeek(all) {
     const weekStart = startOfWeek(new Date());
     const days = [];
@@ -1693,6 +1764,7 @@
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
 
     let html = `<div class="week-head"><h2>Diese Woche</h2><div class="week-head-actions">${renderGoalControl()}<button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
+    html += renderWeightSummary(days);
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
       const total = dayTotals[i];
@@ -1809,7 +1881,8 @@
     out += `Wochensumme: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
     if (weekWeights.length >= 2) {
       const delta = round1(weekWeights[weekWeights.length - 1] - weekWeights[0]);
-      out += `Gewichtsverlauf: ${weekWeights[0]} kg → ${weekWeights[weekWeights.length - 1]} kg (${delta >= 0 ? '+' : ''}${delta} kg)\n`;
+      const avg = round1(weekWeights.reduce((a, b) => a + b, 0) / weekWeights.length);
+      out += `Gewichtsverlauf: ${weekWeights[0]} kg → ${weekWeights[weekWeights.length - 1]} kg (${delta >= 0 ? '+' : ''}${delta} kg) · Ø ${avg} kg\n`;
     } else if (weekWeights.length === 1) {
       out += `Gewicht: ${weekWeights[0]} kg\n`;
     }
