@@ -575,7 +575,31 @@
   .week-head h2 {
     font-size: 17px;
     margin: 0;
+    white-space: nowrap;
   }
+
+  .week-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .week-nav button {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--paper-card);
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .week-nav button:disabled { opacity: 0.35; cursor: default; }
+  .week-nav button:not(:disabled):hover { border-color: var(--herb); color: var(--herb); }
+  .week-nav button:focus-visible { outline: 2px solid var(--herb-ink); outline-offset: 2px; }
 
   .week-head-actions {
     display: flex;
@@ -1598,6 +1622,7 @@
   // Rendering — two views over the same `meals` array.
   // ---------------------------------------------------------------------
   let viewMode = 'feed';
+  let weekOffset = 0; // 0 = current week, -1 = previous week, …
   let editingId = null;
   let weightEditing = false;
   let weekWeightEditingDate = null;
@@ -1869,6 +1894,7 @@
 
   function renderWeek(all) {
     const weekStart = startOfWeek(new Date());
+    weekStart.setDate(weekStart.getDate() + weekOffset * 7);
     const weekEndDay = new Date(weekStart);
     weekEndDay.setDate(weekStart.getDate() + 6);
     const days = dateRange(weekStart, weekEndDay);
@@ -1880,8 +1906,9 @@
 
     const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
+    const weekTitle = weekOffset === 0 ? 'Diese Woche' : `${dateFmt.format(days[0])} – ${dateFmt.format(days[days.length - 1])}`;
 
-    let html = `<div class="week-head"><h2>Diese Woche</h2><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
+    let html = `<div class="week-head"><div class="week-nav"><button type="button" id="weekPrev" aria-label="Vorherige Woche">‹</button><h2>${weekTitle}</h2><button type="button" id="weekNext" aria-label="Nächste Woche"${weekOffset >= 0 ? ' disabled' : ''}>›</button></div><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
     html += renderWeightSummary(days);
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
@@ -1954,6 +1981,10 @@
     }
     const weekWeightCancel = document.getElementById('weekWeightCancel');
     if (weekWeightCancel) weekWeightCancel.addEventListener('click', () => { weekWeightEditingDate = null; renderCurrentView(); });
+    document.getElementById('weekPrev').addEventListener('click', () => { weekOffset -= 1; renderCurrentView(); });
+    document.getElementById('weekNext').addEventListener('click', () => {
+      if (weekOffset < 0) { weekOffset += 1; renderCurrentView(); }
+    });
   }
 
   function renderCurrentView() {
@@ -1966,6 +1997,7 @@
       document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       viewMode = btn.getAttribute('data-view');
+      if (viewMode === 'week') weekOffset = 0;
       renderCurrentView();
     });
   });
