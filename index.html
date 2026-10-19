@@ -647,6 +647,26 @@
 
   .goal-control input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
 
+  .export-range {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+
+  .export-range input {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper-card);
+    color: var(--ink);
+    padding: 5px 6px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+  }
+
+  .export-range input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
+
   .week-day {
     margin-bottom: 16px;
     border-radius: 14px;
@@ -1816,27 +1836,43 @@
     </div>`;
   }
 
-  function renderWeek(all) {
-    const weekStart = startOfWeek(new Date());
+  // Builds a [from, to] inclusive array of Date objects (local midnight).
+  function dateRange(from, to) {
     const days = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setDate(weekStart.getDate() + i);
-      days.push(d);
+    const cursor = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+    const last = new Date(to.getFullYear(), to.getMonth(), to.getDate());
+    while (cursor <= last) {
+      days.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
     }
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
+    return days;
+  }
 
+  // Groups a meals list into a Map keyed by day, for any span of days
+  // (the current week in the UI, or an arbitrary export range).
+  function groupMealsByDay(days, list) {
     const byDay = new Map();
     for (const d of days) byDay.set(d.toDateString(), []);
-    for (const m of all) {
+    const start = days[0];
+    const end = new Date(days[days.length - 1]);
+    end.setDate(end.getDate() + 1);
+    for (const m of list) {
       const t = new Date(m.time);
-      if (t >= weekStart && t < weekEnd) {
+      if (t >= start && t < end) {
         const k = t.toDateString();
         if (byDay.has(k)) byDay.get(k).push(m);
       }
     }
     for (const [k, items] of byDay) byDay.set(k, items.sort((a, b) => new Date(a.time) - new Date(b.time)));
+    return byDay;
+  }
+
+  function renderWeek(all) {
+    const weekStart = startOfWeek(new Date());
+    const weekEndDay = new Date(weekStart);
+    weekEndDay.setDate(weekStart.getDate() + 6);
+    const days = dateRange(weekStart, weekEndDay);
+    const byDay = groupMealsByDay(days, all);
 
     const dayTotals = days.map(d => (byDay.get(d.toDateString()) || []).reduce((sum, m) => sum + (m.nutrition ? m.nutrition.kcal : 0), 0));
     const maxKcal = Math.max(1, ...dayTotals);
@@ -1845,7 +1881,7 @@
     const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
 
-    let html = `<div class="week-head"><h2>Diese Woche</h2><div class="week-head-actions">${renderGoalControl()}<button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
+    let html = `<div class="week-head"><h2>Diese Woche</h2><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
     html += renderWeightSummary(days);
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
@@ -1887,7 +1923,19 @@
       html += `</div>`;
     });
     listEl.innerHTML = html;
-    document.getElementById('exportBtn').addEventListener('click', () => exportWeek(days, byDay));
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const fromVal = document.getElementById('exportFrom').value;
+      const toVal = document.getElementById('exportTo').value;
+      if (!fromVal || !toVal) { toast('Bitte einen Zeitraum wählen.'); return; }
+      const [fy, fm, fd] = fromVal.split('-').map(Number);
+      const [ty, tm, td] = toVal.split('-').map(Number);
+      let from = new Date(fy, fm - 1, fd);
+      let to = new Date(ty, tm - 1, td);
+      if (from > to) { const tmp = from; from = to; to = tmp; }
+      const rangeDays = dateRange(from, to);
+      const rangeByDay = groupMealsByDay(rangeDays, meals);
+      exportRange(rangeDays, rangeByDay);
+    });
     wireGoalControl();
     listEl.querySelectorAll('[data-weight-edit]').forEach(btn => {
       btn.addEventListener('click', () => { weekWeightEditingDate = btn.getAttribute('data-weight-edit'); renderCurrentView(); });
@@ -1922,10 +1970,10 @@
     });
   });
 
-  function exportWeek(days, byDay) {
+  function exportRange(days, byDay) {
     const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-    let out = `Esstagebuch — Woche vom ${dateFmt.format(days[0])} bis ${dateFmt.format(days[6])}\n`;
+    let out = `Esstagebuch — Zeitraum vom ${dateFmt.format(days[0])} bis ${dateFmt.format(days[days.length - 1])}\n`;
     out += '='.repeat(56) + '\n\n';
     const weekTotal = { kcal: 0, carbs: 0, fat: 0, protein: 0, fiber: 0 };
     const weekWeights = [];
@@ -1960,7 +2008,7 @@
       weekTotal.fat += dayTotal.fat; weekTotal.protein += dayTotal.protein; weekTotal.fiber += dayTotal.fiber;
     }
     out += '-'.repeat(56) + '\n';
-    out += `Wochensumme: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
+    out += `Summe: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
     if (weekWeights.length >= 2) {
       const delta = round1(weekWeights[weekWeights.length - 1] - weekWeights[0]);
       const avg = round1(weekWeights.reduce((a, b) => a + b, 0) / weekWeights.length);
@@ -1974,7 +2022,9 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `esstagebuch_woche_${days[0].toISOString().slice(0, 10)}.txt`;
+    const fromStr = dateStrOf(days[0]);
+    const toStr = dateStrOf(days[days.length - 1]);
+    a.download = fromStr === toStr ? `esstagebuch_${fromStr}.txt` : `esstagebuch_${fromStr}_bis_${toStr}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
