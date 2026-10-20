@@ -691,6 +691,19 @@
 
   .export-range input:focus { outline: 2px solid var(--herb); outline-offset: 1px; }
 
+  .export-nutrition-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    margin-top: 8px;
+    cursor: pointer;
+    width: 100%;
+  }
+
+  .export-nutrition-toggle input { accent-color: var(--herb); }
+
   .week-day {
     margin-bottom: 16px;
     border-radius: 14px;
@@ -1908,7 +1921,7 @@
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' });
     const weekTitle = weekOffset === 0 ? 'Diese Woche' : `${dateFmt.format(days[0])} – ${dateFmt.format(days[days.length - 1])}`;
 
-    let html = `<div class="week-head"><div class="week-nav"><button type="button" id="weekPrev" aria-label="Vorherige Woche">‹</button><h2>${weekTitle}</h2><button type="button" id="weekNext" aria-label="Nächste Woche"${weekOffset >= 0 ? ' disabled' : ''}>›</button></div><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div></div>`;
+    let html = `<div class="week-head"><div class="week-nav"><button type="button" id="weekPrev" aria-label="Vorherige Woche">‹</button><h2>${weekTitle}</h2><button type="button" id="weekNext" aria-label="Nächste Woche"${weekOffset >= 0 ? ' disabled' : ''}>›</button></div><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div><label class="export-nutrition-toggle"><input type="checkbox" id="exportIncludeNutrition" checked /> Nährwerte &amp; Kalorien mit exportieren</label></div>`;
     html += renderWeightSummary(days);
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
@@ -1961,7 +1974,8 @@
       if (from > to) { const tmp = from; from = to; to = tmp; }
       const rangeDays = dateRange(from, to);
       const rangeByDay = groupMealsByDay(rangeDays, meals);
-      exportRange(rangeDays, rangeByDay);
+      const includeNutrition = document.getElementById('exportIncludeNutrition').checked;
+      exportRange(rangeDays, rangeByDay, includeNutrition);
     });
     wireGoalControl();
     listEl.querySelectorAll('[data-weight-edit]').forEach(btn => {
@@ -2002,7 +2016,7 @@
     });
   });
 
-  function exportRange(days, byDay) {
+  function exportRange(days, byDay, includeNutrition) {
     const weekdayFmt = new Intl.DateTimeFormat('de-DE', { weekday: 'long' });
     const dateFmt = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     let out = `Esstagebuch — Zeitraum vom ${dateFmt.format(days[0])} bis ${dateFmt.format(days[days.length - 1])}\n`;
@@ -2025,22 +2039,28 @@
       for (const m of items) {
         const type = m.mealType ? `[${m.mealType}] ` : '';
         const n = m.nutrition;
-        const nStr = n ? ` — ${nutritionSymbol(n)}${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)${n.manual ? ' [manuell]' : (n.estimated ? ' [Richtwert]' : '')}` : '';
+        const nStr = (includeNutrition && n) ? ` — ${nutritionSymbol(n)}${n.kcal} kcal (K ${n.carbs}g · F ${n.fat}g · P ${n.protein}g · B ${n.fiber}g)${n.manual ? ' [manuell]' : (n.estimated ? ' [Richtwert]' : '')}` : '';
         out += `  ${timeLabel(m.time)}  ${type}${m.text}${nStr}\n`;
         if (n) {
           dayTotal.kcal += n.kcal; dayTotal.carbs += n.carbs;
           dayTotal.fat += n.fat; dayTotal.protein += n.protein; dayTotal.fiber += n.fiber;
         }
       }
-      const goalNote = settings.dailyCalorieGoal
-        ? (dayTotal.kcal <= settings.dailyCalorieGoal ? '  [Ziel eingehalten]' : `  [${Math.round(dayTotal.kcal - settings.dailyCalorieGoal)} kcal über Ziel]`)
-        : '';
-      out += `  Tagessumme: ~${Math.round(dayTotal.kcal)} kcal (K ${round1(dayTotal.carbs)}g · F ${round1(dayTotal.fat)}g · P ${round1(dayTotal.protein)}g · B ${round1(dayTotal.fiber)}g)${goalNote}\n\n`;
+      if (includeNutrition) {
+        const goalNote = settings.dailyCalorieGoal
+          ? (dayTotal.kcal <= settings.dailyCalorieGoal ? '  [Ziel eingehalten]' : `  [${Math.round(dayTotal.kcal - settings.dailyCalorieGoal)} kcal über Ziel]`)
+          : '';
+        out += `  Tagessumme: ~${Math.round(dayTotal.kcal)} kcal (K ${round1(dayTotal.carbs)}g · F ${round1(dayTotal.fat)}g · P ${round1(dayTotal.protein)}g · B ${round1(dayTotal.fiber)}g)${goalNote}\n\n`;
+      } else {
+        out += '\n';
+      }
       weekTotal.kcal += dayTotal.kcal; weekTotal.carbs += dayTotal.carbs;
       weekTotal.fat += dayTotal.fat; weekTotal.protein += dayTotal.protein; weekTotal.fiber += dayTotal.fiber;
     }
     out += '-'.repeat(56) + '\n';
-    out += `Summe: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
+    if (includeNutrition) {
+      out += `Summe: ~${Math.round(weekTotal.kcal)} kcal (K ${round1(weekTotal.carbs)}g · F ${round1(weekTotal.fat)}g · P ${round1(weekTotal.protein)}g · B ${round1(weekTotal.fiber)}g)\n`;
+    }
     if (weekWeights.length >= 2) {
       const delta = round1(weekWeights[weekWeights.length - 1] - weekWeights[0]);
       const avg = round1(weekWeights.reduce((a, b) => a + b, 0) / weekWeights.length);
@@ -2048,7 +2068,9 @@
     } else if (weekWeights.length === 1) {
       out += `Gewicht: ${weekWeights[0]} kg\n`;
     }
-    out += '\nHinweis: Kalorien- und Makronährstoffangaben stammen aus der USDA-Nährwertdatenbank, hochgerechnet auf eine typische Portionsgröße — keine exakte Messung oder Ernährungsberatung.\n';
+    if (includeNutrition) {
+      out += '\nHinweis: Kalorien- und Makronährstoffangaben stammen aus der USDA-Nährwertdatenbank, hochgerechnet auf eine typische Portionsgröße — keine exakte Messung oder Ernährungsberatung.\n';
+    }
 
     const blob = new Blob([out], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -2056,7 +2078,8 @@
     a.href = url;
     const fromStr = dateStrOf(days[0]);
     const toStr = dateStrOf(days[days.length - 1]);
-    a.download = fromStr === toStr ? `esstagebuch_${fromStr}.txt` : `esstagebuch_${fromStr}_bis_${toStr}.txt`;
+    const suffix = fromStr === toStr ? fromStr : `${fromStr}_bis_${toStr}`;
+    a.download = includeNutrition ? `esstagebuch_${suffix}.txt` : `esstagebuch_${suffix}_ohne_naehrwerte.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
