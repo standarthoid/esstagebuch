@@ -2228,20 +2228,33 @@
   }
 
   let saveQueue = Promise.resolve();
+  let pendingSaves = 0;
   function queueSave(state) {
     saveCache(state);
     setSync('busy');
+    pendingSaves++;
     saveQueue = saveQueue
       .then(() => uploadState(state))
       .then(() => setSync('on'))
       .catch(() => {
         setSync('off');
         toast('Konnte nicht mit Dropbox synchronisieren.');
-      });
+      })
+      .finally(() => { pendingSaves--; });
     return saveQueue;
   }
 
   window.addEventListener('online', () => { if (auth) queueSave(currentState()); });
+
+  // Warn before closing/reloading while a save to Dropbox is still in
+  // flight — without this, a quick close can lose entries that were added
+  // (and shown) but never actually finished uploading.
+  window.addEventListener('beforeunload', (e) => {
+    if (pendingSaves > 0) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 
   async function buildMealFields(rawText) {
     const parsed = parseEntryMeta(rawText);
@@ -2277,7 +2290,10 @@
       // have no real information about what was actually eaten.
       entry.trafficLight = nutrition.estimated ? null : classifyTrafficLight(nutrition);
       renderCurrentView();
-      queueSave(currentState());
+      // Awaited deliberately: callers (including the bulk-add loop) rely
+      // on this to mean the entry is actually safe in Dropbox, not just
+      // queued — otherwise closing the app right after adding can lose it.
+      await queueSave(currentState());
       toast(nutrition.estimated ? `≈${nutrition.kcal} kcal (grober Richtwert)` : `~${nutrition.kcal} kcal geschätzt`);
     } catch (e) {
       console.error('Nährwert-Schätzung fehlgeschlagen:', e);
@@ -2288,7 +2304,7 @@
   async function deleteMeal(id) {
     meals = meals.filter(m => m.id !== id);
     renderCurrentView();
-    queueSave(currentState());
+    await queueSave(currentState());
   }
 
   // Editing trusts the explicit date/time/type fields, not text parsing —
@@ -2321,7 +2337,7 @@
       };
       entry.trafficLight = classifyTrafficLight(entry.nutrition);
       renderCurrentView();
-      queueSave(currentState());
+      await queueSave(currentState());
       toast('Gespeichert');
       return;
     }
@@ -2632,13 +2648,25 @@
   document.getElementById('bulkSubmit').addEventListener('click', async () => {
     const lines = bulkTextarea.value.split('\n').map(l => l.trim()).filter(Boolean);
     if (!lines.length) return;
+    const submitBtn = document.getElementById('bulkSubmit');
+    const cancelBtn = document.getElementById('bulkCancel');
+    bulkTextarea.disabled = true;
+    submitBtn.disabled = true;
+    cancelBtn.disabled = true;
+    // Each line is awaited fully (nutrition lookup AND the Dropbox save)
+    // before starting the next — slower than firing them all at once, but
+    // it means nothing is still "in flight" and losable once this is done.
+    for (let i = 0; i < lines.length; i++) {
+      submitBtn.textContent = `Speichere ${i + 1}/${lines.length} …`;
+      await addMeal(lines[i]);
+    }
+    submitBtn.textContent = 'Alle hinzufügen';
+    bulkTextarea.disabled = false;
+    submitBtn.disabled = false;
+    cancelBtn.disabled = false;
     bulkAdd.hidden = true;
     bulkTextarea.value = '';
-    toast(`Füge ${lines.length} Einträge hinzu …`);
-    for (const line of lines) {
-      await addMeal(line);
-    }
-    toast(`${lines.length} Einträge hinzugefügt`);
+    toast(`${lines.length} Einträge gespeichert`);
   });
 </script>
 </body>
