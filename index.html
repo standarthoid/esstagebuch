@@ -616,6 +616,35 @@
     margin-bottom: 16px;
   }
 
+  .week-trend {
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+
+  .week-trend .weight-label { margin: 0 0 6px; }
+
+  .week-trend-stat {
+    margin: 0 0 2px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .week-trend-msg {
+    margin: 8px 0 0;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .week-trend.good .week-trend-msg { color: var(--tl-good); }
+  .week-trend.warn .week-trend-msg { color: var(--tl-warn); }
+  .week-trend.bad .week-trend-msg { color: var(--tl-bad); }
+  .week-trend.neutral .week-trend-msg { color: var(--ink-soft); }
+
   .weight-summary-head {
     display: flex;
     justify-content: space-between;
@@ -1924,6 +1953,82 @@
     return byDay;
   }
 
+  function weekAvgKcal(days, mealsList) {
+    const byDay = groupMealsByDay(days, mealsList);
+    const totals = days.map(d => (byDay.get(d.toDateString()) || []).reduce((s, m) => s + (m.nutrition ? m.nutrition.kcal : 0), 0));
+    const withData = totals.filter(t => t > 0);
+    if (!withData.length) return null;
+    return round1(withData.reduce((a, b) => a + b, 0) / withData.length);
+  }
+
+  function weekAvgWeight(days) {
+    const vals = days.map(d => { const w = findWeight(dateStrOf(d)); return w ? w.kg : null; }).filter(v => v !== null);
+    if (!vals.length) return null;
+    return round1(vals.reduce((a, b) => a + b, 0) / vals.length);
+  }
+
+  // Rule-based, not AI-generated: a few plain thresholds on the week's own
+  // numbers — never framed as more insight than that.
+  function buildTrendMessage(avgThisWeek, avgLastWeek, goal) {
+    if (avgThisWeek === null) return null;
+    const vsGoal = goal !== null && goal !== undefined ? round1(avgThisWeek - goal) : null;
+    const vsLastWeek = avgLastWeek !== null ? round1(avgThisWeek - avgLastWeek) : null;
+
+    if (vsGoal !== null && vsGoal > 300) {
+      const lastWeekNote = vsLastWeek !== null && vsLastWeek > 0 ? ' Und mehr als letzte Woche.' : '';
+      return { tone: 'bad', text: `Diese Woche im Schnitt ${Math.round(vsGoal)} kcal über deinem Ziel — das ist deutlich.${lastWeekNote} Lohnt sich, die nächsten Tage bewusster zu planen.` };
+    }
+    if (vsGoal !== null && vsGoal > 0) {
+      const lastWeekNote = vsLastWeek !== null && vsLastWeek < 0 ? ' Immerhin schon weniger als letzte Woche.' : ' Kein Drama, aber im Blick behalten.';
+      return { tone: 'warn', text: `Knapp über dem Ziel diese Woche (Ø ${Math.round(vsGoal)} kcal mehr).${lastWeekNote}` };
+    }
+    if (vsGoal !== null && vsGoal <= 0) {
+      if (vsLastWeek !== null && vsLastWeek < -50) {
+        return { tone: 'good', text: `Stark — im Schnitt ${Math.abs(Math.round(vsGoal))} kcal unter dem Ziel und ${Math.abs(Math.round(vsLastWeek))} kcal weniger als letzte Woche. Weiter so!` };
+      }
+      return { tone: 'good', text: `Ziel diese Woche im Schnitt eingehalten (Ø ${Math.abs(Math.round(vsGoal))} kcal darunter). Bleib dran.` };
+    }
+    // No goal set — report the week-over-week trend on its own.
+    if (vsLastWeek !== null) {
+      if (vsLastWeek < -50) return { tone: 'good', text: `Im Schnitt ${Math.abs(Math.round(vsLastWeek))} kcal weniger pro Tag als letzte Woche — Richtung stimmt.` };
+      if (vsLastWeek > 50) return { tone: 'warn', text: `Im Schnitt ${Math.round(vsLastWeek)} kcal mehr pro Tag als letzte Woche.` };
+      return { tone: 'neutral', text: 'Etwa auf dem gleichen Niveau wie letzte Woche.' };
+    }
+    return { tone: 'neutral', text: 'Noch keine Vorwoche zum Vergleich — nächste Woche gibt es einen Trend.' };
+  }
+
+  function renderWeekTrend(days, weekStart, all, goal) {
+    const prevStart = new Date(weekStart);
+    prevStart.setDate(prevStart.getDate() - 7);
+    const prevEnd = new Date(prevStart);
+    prevEnd.setDate(prevStart.getDate() + 6);
+    const prevDays = dateRange(prevStart, prevEnd);
+
+    const avgThisWeek = weekAvgKcal(days, all);
+    const avgLastWeek = weekAvgKcal(prevDays, all);
+    const weightThisWeek = weekAvgWeight(days);
+    const weightLastWeek = weekAvgWeight(prevDays);
+
+    if (avgThisWeek === null && weightThisWeek === null) return '';
+
+    const msg = buildTrendMessage(avgThisWeek, avgLastWeek, goal);
+    const kcalLine = avgThisWeek !== null
+      ? `Ø ${avgThisWeek} kcal/Tag${avgLastWeek !== null ? ` · Vorwoche Ø ${avgLastWeek} kcal/Tag` : ''}`
+      : '';
+    let weightLine = '';
+    if (weightThisWeek !== null) {
+      const wd = weightLastWeek !== null ? round1(weightThisWeek - weightLastWeek) : null;
+      weightLine = `Gewicht Ø ${weightThisWeek} kg${wd !== null ? ` (${wd >= 0 ? '+' : ''}${wd} kg zur Vorwoche)` : ''}`;
+    }
+
+    return `<div class="week-trend${msg ? ' ' + msg.tone : ''}">
+      <p class="weight-label">Wochenvergleich</p>
+      ${kcalLine ? `<p class="week-trend-stat mono">${kcalLine}</p>` : ''}
+      ${weightLine ? `<p class="week-trend-stat mono">${weightLine}</p>` : ''}
+      ${msg ? `<p class="week-trend-msg">${escapeHtml(msg.text)}</p>` : ''}
+    </div>`;
+  }
+
   function renderWeek(all) {
     const weekStart = startOfWeek(new Date());
     weekStart.setDate(weekStart.getDate() + weekOffset * 7);
@@ -1941,6 +2046,7 @@
     const weekTitle = weekOffset === 0 ? 'Diese Woche' : `${dateFmt.format(days[0])} – ${dateFmt.format(days[days.length - 1])}`;
 
     let html = `<div class="week-head"><div class="week-nav"><button type="button" id="weekPrev" aria-label="Vorherige Woche">‹</button><h2>${weekTitle}</h2><button type="button" id="weekNext" aria-label="Nächste Woche"${weekOffset >= 0 ? ' disabled' : ''}>›</button></div><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div><label class="export-nutrition-toggle"><input type="checkbox" id="exportIncludeNutrition" checked /> Nährwerte &amp; Kalorien mit exportieren</label></div>`;
+    html += renderWeekTrend(days, weekStart, all, goal);
     html += renderWeightSummary(days);
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
