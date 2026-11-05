@@ -742,6 +742,14 @@
     gap: 6px;
   }
 
+  .wd-goal-note {
+    margin: -2px 0 6px;
+    font-size: 11.5px;
+  }
+
+  .wd-goal-note .wd-goal-delta.good { color: var(--tl-good); font-weight: 600; }
+  .wd-goal-note .wd-goal-delta.bad { color: var(--tl-bad); font-weight: 600; }
+
   .wd-weight-btn {
     font-size: 11px;
     padding: 3px 9px;
@@ -1942,7 +1950,16 @@
       const w = findWeight(dStr);
 
       let dayClass = '';
-      if (goal && total > 0) dayClass = total <= goal ? ' under-goal' : ' over-goal';
+      let goalDeltaHtml = '';
+      if (goal && total > 0) {
+        if (total <= goal) {
+          dayClass = ' under-goal';
+          goalDeltaHtml = `<span class="wd-goal-delta good">${goal - total} kcal im Defizit</span>`;
+        } else {
+          dayClass = ' over-goal';
+          goalDeltaHtml = `<span class="wd-goal-delta bad">${total - goal} kcal über Ziel</span>`;
+        }
+      }
 
       const kcalHtml = total > 0 ? `~${total} kcal` : '';
       let weightHtml;
@@ -1954,7 +1971,7 @@
         weightHtml = `<button type="button" class="wd-weight-btn" data-weight-edit="${dStr}">+ Gewicht</button>`;
       }
 
-      html += `<div class="week-day${dayClass}"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${kcalHtml}${weightHtml}</span></div><div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
+      html += `<div class="week-day${dayClass}"><div class="week-day-head"><span><span class="wd-name">${weekdayFmt.format(d)}</span><span class="wd-date mono">${dateFmt.format(d)}</span></span><span class="wd-kcal mono">${kcalHtml}${weightHtml}</span></div>${goalDeltaHtml ? `<p class="wd-goal-note">${goalDeltaHtml}</p>` : ''}<div class="week-bar-track"><div class="week-bar-fill" style="width:${pct}%"></div></div>`;
       if (!items.length) {
         html += `<p class="week-empty">Keine Einträge</p>`;
       } else {
@@ -2059,7 +2076,9 @@
       }
       if (includeNutrition) {
         const goalNote = settings.dailyCalorieGoal
-          ? (dayTotal.kcal <= settings.dailyCalorieGoal ? '  [Ziel eingehalten]' : `  [${Math.round(dayTotal.kcal - settings.dailyCalorieGoal)} kcal über Ziel]`)
+          ? (dayTotal.kcal <= settings.dailyCalorieGoal
+              ? `  [${Math.round(settings.dailyCalorieGoal - dayTotal.kcal)} kcal im Defizit]`
+              : `  [${Math.round(dayTotal.kcal - settings.dailyCalorieGoal)} kcal über Ziel]`)
           : '';
         out += `  Tagessumme: ~${Math.round(dayTotal.kcal)} kcal (K ${round1(dayTotal.carbs)}g · F ${round1(dayTotal.fat)}g · P ${round1(dayTotal.protein)}g · B ${round1(dayTotal.fiber)}g)${goalNote}\n\n`;
       } else {
