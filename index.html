@@ -645,6 +645,61 @@
   .week-trend.bad .week-trend-msg { color: var(--tl-bad); }
   .week-trend.neutral .week-trend-msg { color: var(--ink-soft); }
 
+  .weekly-suggestions {
+    background: var(--paper-card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+
+  .weekly-suggestions .weight-label { margin: 0 0 6px; }
+
+  .suggestions-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+
+  .suggestions-list li { margin-bottom: 3px; }
+
+  .suggestions-ok {
+    margin: 0;
+    font-size: 13px;
+    color: var(--tl-good);
+    font-weight: 500;
+  }
+
+  .recipe-heading { margin-top: 12px; }
+
+  .recipe-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .recipe-card {
+    background: var(--sage-paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+
+  .recipe-name {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .recipe-note {
+    margin: 2px 0 0;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+  }
+
   .weight-summary-head {
     display: flex;
     justify-content: space-between;
@@ -1997,6 +2052,91 @@
     return { tone: 'neutral', text: 'Noch keine Vorwoche zum Vergleich — nächste Woche gibt es einen Trend.' };
   }
 
+  // A small curated pool of recipe ideas, tagged by what nutritional gap
+  // they help with. Not AI-generated — picked by hand, matched by rule.
+  const RECIPE_IDEAS = [
+    { name: 'Linsen-Bowl mit Feta', tags: ['protein', 'fiber'], note: 'Linsen, Feta, Rucola, Tomaten, Zitronen-Dressing' },
+    { name: 'Hähnchen-Quinoa-Bowl', tags: ['protein'], note: 'Hähnchenbrust, Quinoa, Brokkoli, Avocado' },
+    { name: 'Skyr-Protein-Pudding', tags: ['protein'], note: 'Skyr, Chiasamen, Proteinpulver, Beeren' },
+    { name: 'Linsensuppe mit Räuchertofu', tags: ['protein', 'fiber', 'balanced'], note: 'Linsen, Tofu, Karotten, Lauch' },
+    { name: 'Gebackener Lachs mit Süßkartoffel', tags: ['protein', 'balanced'], note: 'Lachs, Süßkartoffel, Brokkoli' },
+    { name: 'Bunte Gemüsepfanne mit Vollkornreis', tags: ['fiber', 'leicht'], note: 'Brokkoli, Paprika, Zucchini, Vollkornreis' },
+    { name: 'Kichererbsen-Curry', tags: ['fiber', 'protein'], note: 'Kichererbsen, Spinat, Kokosmilch, Vollkornreis' },
+    { name: 'Overnight Oats mit Chiasamen und Beeren', tags: ['fiber', 'balanced'], note: 'Haferflocken, Chiasamen, Milch, Heidelbeeren' },
+    { name: 'Linsen-Gemüse-Eintopf', tags: ['fiber', 'leicht'], note: 'Linsen, Karotten, Sellerie, Tomaten' },
+    { name: 'Zucchini-Nudeln mit Tomatensauce und Hähnchen', tags: ['leicht', 'protein'], note: 'Zucchini, Tomatensauce, Hähnchenbrust' },
+    { name: 'Gefüllte Paprika mit Hackfleisch und Bulgur', tags: ['balanced'], note: 'Paprika, Hackfleisch, Bulgur, Zwiebel' },
+    { name: 'Bowl mit Quinoa, Hähnchen und Granatapfelkernen', tags: ['balanced', 'protein'], note: 'Quinoa, Hähnchenbrust, Avocado, Granatapfelkerne' },
+    { name: 'Hüttenkäse-Bowl mit Obst und Nüssen', tags: ['protein', 'balanced'], note: 'Hüttenkäse, Beeren, Mango, Nüsse' },
+    { name: 'Gefüllter Wirsingkohl mit Hackfleisch und Reis', tags: ['balanced'], note: 'Wirsing, Hackfleisch, Reis, Karotten' },
+  ];
+
+  function weeklyAggregates(days, mealsList) {
+    const byDay = groupMealsByDay(days, mealsList);
+    let kcalSum = 0, proteinSum = 0, fiberSum = 0, fatSum = 0, carbSum = 0, daysWithData = 0;
+    for (const d of days) {
+      const withN = (byDay.get(d.toDateString()) || []).filter(m => m.nutrition);
+      if (!withN.length) continue;
+      daysWithData++;
+      for (const m of withN) {
+        kcalSum += m.nutrition.kcal; proteinSum += m.nutrition.protein;
+        fiberSum += m.nutrition.fiber; fatSum += m.nutrition.fat; carbSum += m.nutrition.carbs;
+      }
+    }
+    if (!daysWithData) return null;
+    return {
+      avgKcal: round1(kcalSum / daysWithData), avgProtein: round1(proteinSum / daysWithData),
+      avgFiber: round1(fiberSum / daysWithData), avgFat: round1(fatSum / daysWithData),
+      avgCarb: round1(carbSum / daysWithData), daysWithData,
+    };
+  }
+
+  function detectGaps(agg) {
+    const gaps = [];
+    if (agg.avgProtein < 60) gaps.push('protein');
+    if (agg.avgFiber < 25) gaps.push('fiber');
+    if (agg.avgKcal > 0 && (agg.avgFat * 9) / agg.avgKcal > 0.38) gaps.push('leicht');
+    return gaps;
+  }
+
+  function buildWeeklyTips(agg, workoutCount) {
+    const tips = [];
+    if (agg.avgProtein < 60) tips.push(`Eiweiß im Schnitt bei ${agg.avgProtein}g/Tag — proteinreichere Mahlzeiten sättigen länger.`);
+    if (agg.avgFiber < 25) tips.push(`Ballaststoffe im Schnitt bei ${agg.avgFiber}g/Tag (empfohlen ~30g) — mehr Gemüse, Hülsenfrüchte oder Vollkorn einbauen.`);
+    if (agg.avgKcal > 0 && (agg.avgFat * 9) / agg.avgKcal > 0.38) tips.push('Fettanteil diese Woche recht hoch — leichtere Garmethoden (Ofen/Dampf statt frittiert) könnten helfen.');
+    if (workoutCount === 0) tips.push('Diese Woche noch kein Workout geloggt — auch eine kurze Einheit zählt.');
+    return tips;
+  }
+
+  function pickRecipes(gaps) {
+    let pool = gaps.length ? RECIPE_IDEAS.filter(r => r.tags.some(t => gaps.includes(t))) : [];
+    if (!pool.length) pool = RECIPE_IDEAS.filter(r => r.tags.includes('balanced'));
+    const weekIdx = Math.floor(dayOfYear(new Date()) / 7);
+    const start = weekIdx % pool.length;
+    const picked = [];
+    for (let i = 0; i < Math.min(3, pool.length); i++) picked.push(pool[(start + i) % pool.length]);
+    return picked;
+  }
+
+  function renderWeeklySuggestions(days, all) {
+    const agg = weeklyAggregates(days, all);
+    if (!agg) return '';
+    const workoutCount = days.reduce((sum, d) => sum + workoutsForDate(dateStrOf(d)).length, 0);
+    const tips = buildWeeklyTips(agg, workoutCount);
+    const gaps = detectGaps(agg);
+    const recipes = pickRecipes(gaps);
+
+    const tipsHtml = tips.length ? `<ul class="suggestions-list">${tips.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>` : '<p class="suggestions-ok">Läuft ausgewogen diese Woche — weiter so.</p>';
+    const recipesHtml = recipes.map(r => `<div class="recipe-card"><p class="recipe-name">${escapeHtml(r.name)}</p><p class="recipe-note">${escapeHtml(r.note)}</p></div>`).join('');
+
+    return `<div class="weekly-suggestions">
+      <p class="weight-label">Verbesserungsvorschläge</p>
+      ${tipsHtml}
+      <p class="weight-label recipe-heading">Rezeptideen zum Ausprobieren</p>
+      <div class="recipe-list">${recipesHtml}</div>
+    </div>`;
+  }
+
   function renderWeekTrend(days, weekStart, all, goal) {
     const prevStart = new Date(weekStart);
     prevStart.setDate(prevStart.getDate() - 7);
@@ -2047,6 +2187,7 @@
 
     let html = `<div class="week-head"><div class="week-nav"><button type="button" id="weekPrev" aria-label="Vorherige Woche">‹</button><h2>${weekTitle}</h2><button type="button" id="weekNext" aria-label="Nächste Woche"${weekOffset >= 0 ? ' disabled' : ''}>›</button></div><div class="week-head-actions">${renderGoalControl()}<div class="export-range"><input type="date" id="exportFrom" value="${dateStrOf(days[0])}" aria-label="Export von" /><span>bis</span><input type="date" id="exportTo" value="${dateStrOf(days[days.length - 1])}" aria-label="Export bis" /></div><button type="button" class="export-btn" id="exportBtn">Exportieren</button></div><label class="export-nutrition-toggle"><input type="checkbox" id="exportIncludeNutrition" checked /> Nährwerte &amp; Kalorien mit exportieren</label></div>`;
     html += renderWeekTrend(days, weekStart, all, goal);
+    html += renderWeeklySuggestions(days, all);
     html += renderWeightSummary(days);
     days.forEach((d, i) => {
       const items = byDay.get(d.toDateString()) || [];
